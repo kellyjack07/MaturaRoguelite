@@ -13,6 +13,7 @@ var is_attacking: bool = false
 #start
 func _ready() -> void:
 	health_component.died.connect(on_died)
+	print(is_in_group("player"))
 	play_idle_animation()
 
 

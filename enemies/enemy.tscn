@@ -7,6 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://chbvdi5vwj1x5" path="res://assets/placeholder/2D Pixel Dungeon Asset Pack/Character_animation/monsters_idle/skeleton2/v2/skeleton2_v2_2.png" id="3_uba7a"]
 [ext_resource type="Texture2D" uid="uid://er5cv2h3iwue" path="res://assets/placeholder/2D Pixel Dungeon Asset Pack/Character_animation/monsters_idle/skeleton2/v2/skeleton2_v2_3.png" id="4_28xqf"]
 [ext_resource type="Texture2D" uid="uid://b3rq4ri3wxmk5" path="res://assets/placeholder/2D Pixel Dungeon Asset Pack/Character_animation/monsters_idle/skeleton2/v2/skeleton2_v2_4.png" id="5_g67el"]
+[ext_resource type="Script" uid="uid://b2ihetxny5ppg" path="res://scripts/enemy_hitbox.gd" id="8_4w5fm"]
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_ccbdt"]
 animations = [{
@@ -40,8 +41,13 @@ radius = 6.0
 radius = 8.0
 height = 22.0
 
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_uba7a"]
+radius = 6.0
+height = 14.0
+
 [node name="Enemy" type="CharacterBody2D" unique_id=385138392]
 script = ExtResource("1_epsnb")
+move_speed = 20.0
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1988857593]
 sprite_frames = SubResource("SpriteFrames_ccbdt")
@@ -62,3 +68,11 @@ health_path = NodePath("../Health")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox" unique_id=1633633460]
 shape = SubResource("CapsuleShape2D_4w5fm")
+
+[node name="Hitbox" type="Area2D" parent="." unique_id=2145670345]
+script = ExtResource("8_4w5fm")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox" unique_id=1430550753]
+shape = SubResource("CapsuleShape2D_uba7a")
+
+[connection signal="area_entered" from="Hitbox" to="Hitbox" method="_on_area_entered"]

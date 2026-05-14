@@ -27,6 +27,10 @@ window/stretch/mode="viewport"
 
 project/assembly_name="Matura_Roguelite"
 
+[global_group]
+
+player=""
+
 [input]
 
 up={

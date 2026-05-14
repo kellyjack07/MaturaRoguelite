@@ -6,6 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://doxtevkpqijcj" path="res://assets/placeholder/player_assets_placeholder/With_shadow/Swordsman_lvl1_Walk_with_shadow.png" id="2_qhqgy"]
 [ext_resource type="Script" uid="uid://by6a20ksr22xh" path="res://scripts/health_component.gd" id="5_qlg0r"]
 [ext_resource type="Script" uid="uid://cc4hg5m86k3pi" path="res://scripts/hitbox_component.gd" id="6_tuyoq"]
+[ext_resource type="Script" uid="uid://bomvf3khf8d46" path="res://scripts/hurtbox_component.gd" id="7_fjrip"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_6e8lb"]
 atlas = ExtResource("2_dqkch")
@@ -556,7 +557,11 @@ radius = 6.0
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_qlg0r"]
 size = Vector2(22.5, 21)
 
-[node name="Player" type="CharacterBody2D" unique_id=488959924]
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_smehm"]
+radius = 9.0
+height = 24.0
+
+[node name="Player" type="CharacterBody2D" unique_id=488959924 groups=["player"]]
 z_index = 10
 script = ExtResource("1_qhqgy")
 
@@ -579,5 +584,13 @@ script = ExtResource("6_tuyoq")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="AttackArea" unique_id=1760277732]
 shape = SubResource("RectangleShape2D_qlg0r")
+
+[node name="Hurtbox" type="Area2D" parent="." unique_id=801165475]
+script = ExtResource("7_fjrip")
+health_path = NodePath("../Health")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox" unique_id=354709791]
+position = Vector2(0, 2)
+shape = SubResource("CapsuleShape2D_smehm")
 
 [connection signal="animation_finished" from="AnimatedSprite2D" to="." method="_on_animated_sprite_2d_animation_finished"]
