@@ -121,9 +121,3 @@ func _on_animated_sprite_2d_animation_finished() -> void:
 func on_died() -> void:
 	print("player died")
 	queue_free()
-	
-
-#test damage
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_accept"):
-		health_component.take_damage(1)

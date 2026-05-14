@@ -1,0 +1,63 @@
+[gd_scene format=3 uid="uid://7jmsfvmcyhgv"]
+
+[ext_resource type="Script" uid="uid://by6a20ksr22xh" path="res://scripts/health_component.gd" id="1_7frlh"]
+[ext_resource type="Script" uid="uid://k8ny7ptwet4q" path="res://scripts/enemy.gd" id="1_epsnb"]
+[ext_resource type="Texture2D" uid="uid://clmctuh6xlht5" path="res://assets/placeholder/2D Pixel Dungeon Asset Pack/Character_animation/monsters_idle/skeleton2/v2/skeleton2_v2_1.png" id="2_4w5fm"]
+[ext_resource type="Script" uid="uid://bomvf3khf8d46" path="res://scripts/hurtbox_component.gd" id="2_orwns"]
+[ext_resource type="Texture2D" uid="uid://chbvdi5vwj1x5" path="res://assets/placeholder/2D Pixel Dungeon Asset Pack/Character_animation/monsters_idle/skeleton2/v2/skeleton2_v2_2.png" id="3_uba7a"]
+[ext_resource type="Texture2D" uid="uid://er5cv2h3iwue" path="res://assets/placeholder/2D Pixel Dungeon Asset Pack/Character_animation/monsters_idle/skeleton2/v2/skeleton2_v2_3.png" id="4_28xqf"]
+[ext_resource type="Texture2D" uid="uid://b3rq4ri3wxmk5" path="res://assets/placeholder/2D Pixel Dungeon Asset Pack/Character_animation/monsters_idle/skeleton2/v2/skeleton2_v2_4.png" id="5_g67el"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_ccbdt"]
+animations = [{
+"frames": [],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_4w5fm")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_uba7a")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_28xqf")
+}, {
+"duration": 1.0,
+"texture": ExtResource("5_g67el")
+}],
+"loop": true,
+"name": &"placeholder_enemy_sprite",
+"speed": 4.0
+}]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_epsnb"]
+radius = 6.0
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_4w5fm"]
+radius = 8.0
+height = 22.0
+
+[node name="Enemy" type="CharacterBody2D" unique_id=385138392]
+script = ExtResource("1_epsnb")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1988857593]
+sprite_frames = SubResource("SpriteFrames_ccbdt")
+animation = &"placeholder_enemy_sprite"
+frame_progress = 0.82633823
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=430245201]
+position = Vector2(0, 5)
+shape = SubResource("CircleShape2D_epsnb")
+
+[node name="Health" type="Node" parent="." unique_id=373322071]
+script = ExtResource("1_7frlh")
+
+[node name="Hurtbox" type="Area2D" parent="." unique_id=1011045581]
+script = ExtResource("2_orwns")
+health_path = NodePath("../Health")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox" unique_id=1633633460]
+shape = SubResource("CapsuleShape2D_4w5fm")
