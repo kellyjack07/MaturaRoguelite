@@ -10,3 +10,4 @@ func take_hit(damage: int) -> void:
 		return
 	
 	health_component.take_damage(damage)
+	print("damage taken")

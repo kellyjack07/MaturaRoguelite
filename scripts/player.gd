@@ -4,6 +4,7 @@ extends CharacterBody2D
 
 @onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var health_component: HealthComponent = $Health
+@onready var attack_area: HitboxComponent = $AttackArea
 
 var input_direction: Vector2 = Vector2.ZERO
 var facing_direction: Vector2 = Vector2.DOWN
@@ -43,7 +44,21 @@ func handle_attack_input() -> void:
 #attack start
 func start_attack() -> void:
 	is_attacking = true
+	update_attack_area_direction()
 	play_attack_animation()
+	attack_area.deal_damage()
+
+
+#attack area
+func update_attack_area_direction() -> void:
+	if facing_direction == Vector2.DOWN:
+		attack_area.position = Vector2(0, 12)
+	elif facing_direction == Vector2.UP:
+		attack_area.position = Vector2(0, -12)
+	elif facing_direction == Vector2.RIGHT:
+		attack_area.position = Vector2(12, 0)
+	else:
+		attack_area.position = Vector2(-12, 0)
 
 
 #movement
