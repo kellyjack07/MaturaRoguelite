@@ -4,7 +4,6 @@
 [ext_resource type="PackedScene" uid="uid://bj1mt1xhukchb" path="res://rooms/test_room.tscn" id="2_0wfyh"]
 
 [node name="Main" type="Node2D" unique_id=686745571]
-position = Vector2(321, 179)
 
 [node name="Player" parent="." unique_id=488959924 instance=ExtResource("1_o5qli")]
 

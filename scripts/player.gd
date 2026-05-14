@@ -6,6 +6,7 @@ extends CharacterBody2D
 
 var input_direction: Vector2 = Vector2.ZERO
 var facing_direction: Vector2 = Vector2.DOWN
+var is_attacking: bool = false
 
 #start
 func _ready() -> void:
@@ -14,6 +15,13 @@ func _ready() -> void:
 
 #updates
 func _physics_process(_delta: float) -> void:
+	handle_attack_input()
+
+	if is_attacking:
+		velocity = Vector2.ZERO
+		move_and_slide()
+		return
+
 	get_input_direction()
 	move_player()
 	update_facing_direction()
@@ -22,6 +30,18 @@ func _physics_process(_delta: float) -> void:
 
 func get_input_direction() -> void:
 	input_direction = Input.get_vector("left", "right", "up", "down")
+
+
+#attack
+func handle_attack_input() -> void:
+	if Input.is_action_just_pressed("attack") and not is_attacking:
+		start_attack()
+
+
+#attack start
+func start_attack() -> void:
+	is_attacking = true
+	play_attack_animation()
 
 
 #movement
@@ -68,3 +88,29 @@ func play_walk_animation() -> void:
 	else:
 		animated_sprite.play("walk_side")
 		animated_sprite.flip_h = facing_direction == Vector2.RIGHT
+
+
+#attack animation
+func play_attack_animation() -> void:
+	if facing_direction == Vector2.DOWN:
+		animated_sprite.play("attack_down")
+		animated_sprite.flip_h = false
+	elif facing_direction == Vector2.UP:
+		animated_sprite.play("attack_up")
+		animated_sprite.flip_h = false
+	else:
+		animated_sprite.play("attack_side")
+		animated_sprite.flip_h = facing_direction == Vector2.RIGHT
+
+
+#attack end
+func _on_animated_sprite_2d_animation_finished() -> void:
+	if not animated_sprite.animation.begins_with("attack"):
+		return
+	
+	is_attacking = false
+	
+	if input_direction == Vector2.ZERO:
+		play_idle_animation()
+	else:
+		play_walk_animation()
