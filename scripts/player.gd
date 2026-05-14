@@ -3,6 +3,7 @@ extends CharacterBody2D
 @export var move_speed: float = 120.0
 
 @onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
+@onready var health_component: HealthComponent = $Health
 
 var input_direction: Vector2 = Vector2.ZERO
 var facing_direction: Vector2 = Vector2.DOWN
@@ -10,6 +11,7 @@ var is_attacking: bool = false
 
 #start
 func _ready() -> void:
+	health_component.died.connect(on_died)
 	play_idle_animation()
 
 
@@ -114,3 +116,14 @@ func _on_animated_sprite_2d_animation_finished() -> void:
 		play_idle_animation()
 	else:
 		play_walk_animation()
+
+#death
+func on_died() -> void:
+	print("player died")
+	queue_free()
+	
+
+#test damage
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_accept"):
+		health_component.take_damage(1)
