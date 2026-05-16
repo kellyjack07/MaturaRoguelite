@@ -47,7 +47,7 @@ height = 14.0
 
 [node name="Enemy" type="CharacterBody2D" unique_id=385138392]
 script = ExtResource("1_epsnb")
-move_speed = 20.0
+move_speed = 10.0
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1988857593]
 sprite_frames = SubResource("SpriteFrames_ccbdt")
@@ -60,7 +60,6 @@ shape = SubResource("CircleShape2D_epsnb")
 
 [node name="Health" type="Node" parent="." unique_id=373322071]
 script = ExtResource("1_7frlh")
-max_health = 5
 
 [node name="Hurtbox" type="Area2D" parent="." unique_id=1011045581]
 script = ExtResource("2_orwns")

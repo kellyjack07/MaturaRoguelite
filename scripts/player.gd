@@ -10,6 +10,8 @@ var input_direction: Vector2 = Vector2.ZERO
 var facing_direction: Vector2 = Vector2.DOWN
 var is_attacking: bool = false
 
+signal died
+
 #start
 func _ready() -> void:
 	health_component.died.connect(on_died)
@@ -133,7 +135,11 @@ func _on_animated_sprite_2d_animation_finished() -> void:
 	else:
 		play_walk_animation()
 
+
 #death
 func on_died() -> void:
-	print("player died")
-	queue_free()
+	set_physics_process(false)
+	attack_area.monitoring = false
+	$Hurtbox.monitoring = false
+	hide()
+	died.emit()

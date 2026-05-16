@@ -574,10 +574,10 @@ position = Vector2(0, 8)
 shape = SubResource("CircleShape2D_2gdjj")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=797709859]
-zoom = Vector2(2, 2)
 
 [node name="Health" type="Node" parent="." unique_id=2027964474]
 script = ExtResource("5_qlg0r")
+max_health = 5
 
 [node name="AttackArea" type="Area2D" parent="." unique_id=1575710335]
 script = ExtResource("6_tuyoq")
