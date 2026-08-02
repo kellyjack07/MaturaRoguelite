@@ -4,18 +4,29 @@ extends Node2D
 @onready var death_screen: Control = $UI/DeathScreen
 @onready var health_label: Label = $UI/HealthLabel
 @onready var health_component: HealthComponent = $Player/Health
+@onready var state_label: Label = $UI/StateLabel
+@onready var multiplier_label: Label = $UI/MultiplierLabel
+@onready var damage_label: Label = $UI/DamageLabel
 
 #start
 func _ready() -> void:
 	health_component.health_changed.connect(_on_player_health_changed)
 	death_screen.visible = false
 	_on_player_health_changed(health_component.current_health, health_component.max_health)
+	update_debug_ui()
 
+#debug ui
+func update_debug_ui() -> void:
+	state_label.text = "State: " + player.movement_state
+	multiplier_label.text = "Multiplier: " + str(player.get_damage_multiplier())
+	damage_label.text = "Last Damage: " + str(player.last_damage_dealt)
+
+func _process(_delta: float) -> void:
+	update_debug_ui()
 
 #player death
 func _on_player_died() -> void:
 	call_deferred("show_death_screen")
-
 
 func show_death_screen() -> void:
 	death_screen.visible = true

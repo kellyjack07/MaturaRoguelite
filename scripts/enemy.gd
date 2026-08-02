@@ -1,6 +1,7 @@
 extends CharacterBody2D
 
 @export var move_speed: float = 50.0
+@export var stop_distance: float = 14.0
 
 @onready var health_component: HealthComponent = $Health
 
@@ -25,6 +26,13 @@ func _physics_process(_delta: float) -> void:
 
 #movement
 func move_toward_player() -> void:
+	var distance_to_player: float = global_position.distance_to(player.global_position)
+	
+	if distance_to_player <= stop_distance:
+		velocity = Vector2.ZERO
+		move_and_slide()
+		return
+	
 	var direction: Vector2 = global_position.direction_to(player.global_position)
 	velocity = direction * move_speed
 	move_and_slide()
