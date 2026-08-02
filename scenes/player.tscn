@@ -568,7 +568,9 @@ script = ExtResource("1_qhqgy")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1375415653]
 sprite_frames = SubResource("SpriteFrames_6e8lb")
-animation = &"attack_up"
+animation = &"attack_down"
+frame = 7
+frame_progress = 1.0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=505140963]
 position = Vector2(0, 8)
@@ -579,7 +581,7 @@ zoom = Vector2(2, 2)
 
 [node name="Health" type="Node" parent="." unique_id=2027964474]
 script = ExtResource("5_qlg0r")
-max_health = 5
+max_health = 10
 
 [node name="AttackArea" type="Area2D" parent="." unique_id=1575710335]
 script = ExtResource("6_tuyoq")
@@ -590,6 +592,7 @@ shape = SubResource("RectangleShape2D_qlg0r")
 [node name="Hurtbox" type="Area2D" parent="." unique_id=801165475]
 script = ExtResource("7_fjrip")
 health_path = NodePath("../Health")
+invulnerability_duration = null
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox" unique_id=354709791]
 position = Vector2(0, 2)

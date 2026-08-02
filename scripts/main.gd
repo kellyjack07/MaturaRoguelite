@@ -8,6 +8,10 @@ extends Node2D
 @onready var multiplier_label: Label = $UI/MultiplierLabel
 @onready var damage_label: Label = $UI/DamageLabel
 
+var hit_stop_active: bool = false
+var hit_stop_duration: float = 0.01
+var hit_stop_scale: float = 0.05
+
 #start
 func _ready() -> void:
 	health_component.health_changed.connect(_on_player_health_changed)
@@ -32,6 +36,17 @@ func show_death_screen() -> void:
 	death_screen.visible = true
 	get_tree().paused = true
 
+func trigger_hit_stop() -> void:
+	if hit_stop_active:
+		return
+	
+	hit_stop_active = true
+	Engine.time_scale = hit_stop_scale
+	
+	await get_tree().create_timer(hit_stop_duration, true, false, true).timeout
+	
+	Engine.time_scale = 1.0
+	hit_stop_active = false
 
 #health ui
 func _on_player_health_changed(current_health: int, max_health: int) -> void:

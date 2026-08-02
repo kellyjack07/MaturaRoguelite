@@ -2,10 +2,7 @@
 
 [ext_resource type="Script" uid="uid://by6a20ksr22xh" path="res://scripts/health_component.gd" id="1_7frlh"]
 [ext_resource type="Script" uid="uid://k8ny7ptwet4q" path="res://scripts/enemy.gd" id="1_epsnb"]
-[ext_resource type="Texture2D" uid="uid://clmctuh6xlht5" path="res://assets/placeholder/2D Pixel Dungeon Asset Pack/Character_animation/monsters_idle/skeleton2/v2/skeleton2_v2_1.png" id="2_4w5fm"]
 [ext_resource type="Script" uid="uid://bomvf3khf8d46" path="res://scripts/hurtbox_component.gd" id="2_orwns"]
-[ext_resource type="Texture2D" uid="uid://chbvdi5vwj1x5" path="res://assets/placeholder/2D Pixel Dungeon Asset Pack/Character_animation/monsters_idle/skeleton2/v2/skeleton2_v2_2.png" id="3_uba7a"]
-[ext_resource type="Texture2D" uid="uid://er5cv2h3iwue" path="res://assets/placeholder/2D Pixel Dungeon Asset Pack/Character_animation/monsters_idle/skeleton2/v2/skeleton2_v2_3.png" id="4_28xqf"]
 [ext_resource type="Texture2D" uid="uid://b3rq4ri3wxmk5" path="res://assets/placeholder/2D Pixel Dungeon Asset Pack/Character_animation/monsters_idle/skeleton2/v2/skeleton2_v2_4.png" id="5_g67el"]
 [ext_resource type="Script" uid="uid://b2ihetxny5ppg" path="res://scripts/enemy_hitbox.gd" id="8_4w5fm"]
 
@@ -17,15 +14,6 @@ animations = [{
 "speed": 5.0
 }, {
 "frames": [{
-"duration": 1.0,
-"texture": ExtResource("2_4w5fm")
-}, {
-"duration": 1.0,
-"texture": ExtResource("3_uba7a")
-}, {
-"duration": 1.0,
-"texture": ExtResource("4_28xqf")
-}, {
 "duration": 1.0,
 "texture": ExtResource("5_g67el")
 }],
@@ -63,18 +51,18 @@ shape = SubResource("CircleShape2D_epsnb")
 
 [node name="Health" type="Node" parent="." unique_id=373322071]
 script = ExtResource("1_7frlh")
-max_health = 42
+max_health = 20
 
 [node name="Hurtbox" type="Area2D" parent="." unique_id=1011045581]
 script = ExtResource("2_orwns")
 health_path = NodePath("../Health")
+invulnerability_duration = 0.0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox" unique_id=1633633460]
 shape = SubResource("CapsuleShape2D_4w5fm")
 
 [node name="Hitbox" type="Area2D" parent="." unique_id=2145670345]
 script = ExtResource("8_4w5fm")
-damage = 0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox" unique_id=1430550753]
 shape = SubResource("CapsuleShape2D_uba7a")

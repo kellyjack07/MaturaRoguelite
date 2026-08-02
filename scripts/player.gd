@@ -14,6 +14,10 @@ extends CharacterBody2D
 @onready var health_component: HealthComponent = $Health
 @onready var attack_area: HitboxComponent = $AttackArea
 
+@export var hit_flash_duration: float = 0.25
+@export var hit_flash_color: Color = Color(1.2, 0.9, 0.9, 1.0)
+var hit_flash_active: bool = false
+
 var input_direction: Vector2 = Vector2.ZERO
 var move_direction: Vector2 = Vector2.DOWN
 var is_attacking: bool = false
@@ -218,6 +222,22 @@ func _on_animated_sprite_2d_animation_finished() -> void:
 	else:
 		play_walk_animation()
 
+
+#hit flash
+func play_hit_flash() -> void:
+	if hit_flash_active:
+		return
+	
+	hit_flash_active = true
+	animated_sprite.modulate = hit_flash_color
+	
+	await get_tree().create_timer(hit_flash_duration).timeout
+	
+	animated_sprite.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	hit_flash_active = false
+
+func apply_hit_reaction(_from_position: Vector2, _damage: int) -> void:
+	play_hit_flash()
 
 #death
 func on_died() -> void:

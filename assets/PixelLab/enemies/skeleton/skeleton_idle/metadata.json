@@ -1,0 +1,36 @@
+{
+  "group_id": "1a922c9f-2a0d-4fde-8782-3faab9d3a6a3",
+  "states": [
+    {
+      "character": {
+        "id": "3286811d-fc35-4f36-a727-bfe3c2b94227",
+        "name": "Idle",
+        "prompt": "Create a pixel art enemy spritesheet for a 2D high top-down fantasy dungeon roguelite.\n\nSubject:\n- small weakly armored skeleton\n- thin, frail, human-like body\n- creepy, slightly laughing expression\n- basic early-game melee enemy\n- no weapon\n- attacks with hand swipes / claw-like strikes\n\nStyle:\n- clean readable pixel art\n- mid-detail but still simple enough for a prototype\n- clear silhouette\n- not overly noisy\n- not realistic\n- not cute\n- slightly dark fantasy\n- colors: bone, brown, grey\n\nPerspective and scale:\n- high top-down view\n- same gameplay scale as a 32x32 roguelite character\n- compact body proportions\n- readable at small size\n\nAnimation sheet:\n- one spritesheet\n- include idle, walk, and attack\n- keep frames consistent\n- centered character in every frame\n- equal frame size\n- no cropped limbs\n- no uneven spacing between frames\n\nOutput rules:\n- transparent background\n- no environment\n- no floor\n- no text\n- no UI\n- no shadow\n- no glow effects\n- no extra props\n- keep the design suitable for future animation edits\n\nDesign goal:\n- should feel like a weak starter enemy in a dungeon combat prototype\n- should visually communicate low defense, low weight, and melee aggression\n- should be easy to animate further in Godot",
+        "size": {
+          "width": 52,
+          "height": 52
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "high top-down",
+        "created_at": "2026-08-02T10:32:31.156956+00:00"
+      },
+      "folder": "Idle",
+      "frames": {
+        "rotations": {
+          "south": "Idle/rotations/south.png",
+          "south-east": "Idle/rotations/south-east.png",
+          "east": "Idle/rotations/east.png",
+          "north-east": "Idle/rotations/north-east.png",
+          "north": "Idle/rotations/north.png",
+          "north-west": "Idle/rotations/north-west.png",
+          "west": "Idle/rotations/west.png",
+          "south-west": "Idle/rotations/south-west.png"
+        },
+        "animations": {}
+      }
+    }
+  ],
+  "export_version": "3.1",
+  "export_date": "2026-08-02T10:35:49.824972"
+}

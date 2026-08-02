@@ -5,4 +5,4 @@ extends Area2D
 #hit
 func _on_area_entered(area: Area2D) -> void:
 	if area is HurtboxComponent:
-		area.take_hit(damage)
+		area.take_hit(damage, global_position)

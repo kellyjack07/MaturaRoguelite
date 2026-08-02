@@ -25,4 +25,7 @@ func deal_damage() -> void:
 			if collider.get_parent() == get_parent():
 				continue
 		
-			collider.take_hit(current_damage)
+			collider.take_hit(current_damage, global_position)
+
+			if get_tree().current_scene.has_method("trigger_hit_stop"):
+				get_tree().current_scene.trigger_hit_stop()
