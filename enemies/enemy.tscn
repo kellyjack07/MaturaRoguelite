@@ -56,7 +56,7 @@ max_health = 20
 [node name="Hurtbox" type="Area2D" parent="." unique_id=1011045581]
 script = ExtResource("2_orwns")
 health_path = NodePath("../Health")
-invulnerability_duration = 0.0
+invulnerability_duration = 0.18
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox" unique_id=1633633460]
 shape = SubResource("CapsuleShape2D_4w5fm")

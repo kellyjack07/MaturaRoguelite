@@ -592,7 +592,6 @@ shape = SubResource("RectangleShape2D_qlg0r")
 [node name="Hurtbox" type="Area2D" parent="." unique_id=801165475]
 script = ExtResource("7_fjrip")
 health_path = NodePath("../Health")
-invulnerability_duration = null
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox" unique_id=354709791]
 position = Vector2(0, 2)

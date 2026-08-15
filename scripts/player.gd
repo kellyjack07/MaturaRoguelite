@@ -1,5 +1,11 @@
 extends CharacterBody2D
 
+enum MovementState {
+	STATIONARY,
+	WALKING,
+	DASHING,
+}
+
 @export var move_speed: float = 120.0
 @export var dash_speed: float = 260.0
 @export var dash_duration: float = 0.15
@@ -9,32 +15,37 @@ extends CharacterBody2D
 @export var stationary_multiplier: float = 1.0
 @export var walking_multiplier: float = 1.25
 @export var dashing_multiplier: float = 1.75
+@export var attack_hit_delay: float = 0.08
 
 @onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var health_component: HealthComponent = $Health
 @onready var attack_area: HitboxComponent = $AttackArea
+@onready var hurtbox: HurtboxComponent = $Hurtbox
 
 @export var hit_flash_duration: float = 0.25
 @export var hit_flash_color: Color = Color(1.2, 0.9, 0.9, 1.0)
+@export var invulnerability_blink_count: int = 2
 var hit_flash_active: bool = false
+var invulnerability_blink_active: bool = false
+var default_modulate: Color = Color(1.0, 1.0, 1.0, 1.0)
 
 var input_direction: Vector2 = Vector2.ZERO
 var move_direction: Vector2 = Vector2.DOWN
 var is_attacking: bool = false
-var movement_state: String = "stationary"
+var movement_state: MovementState = MovementState.STATIONARY
 var is_dashing: bool = false
 var dash_direction: Vector2 = Vector2.ZERO
 var dash_time_left: float = 0.0
 var dash_cooldown_left: float = 0.0
 var last_damage_dealt: int = 0
 
-
 signal died
+signal debug_state_changed
 
 #start
 func _ready() -> void:
 	health_component.died.connect(on_died)
-	print(is_in_group("player"))
+	default_modulate = animated_sprite.modulate
 	play_idle_animation()
 
 
@@ -66,9 +77,9 @@ func handle_attack_input() -> void:
 
 #multiplicator
 func get_damage_multiplier() -> float:
-	if movement_state == "dashing":
+	if movement_state == MovementState.DASHING:
 		return dashing_multiplier
-	elif movement_state == "walking":
+	elif movement_state == MovementState.WALKING:
 		return walking_multiplier
 	else:
 		return stationary_multiplier
@@ -77,14 +88,25 @@ func get_damage_multiplier() -> float:
 func get_attack_damage() -> int:
 	var damage: int = round(base_attack_damage * get_damage_multiplier())
 	last_damage_dealt = damage
+	debug_state_changed.emit()
 	return damage
 
 #attack start
 func start_attack() -> void:
 	is_attacking = true
+	attack_area.start_swing()
 	update_attack_area_direction()
-	attack_area.set_damage(get_attack_damage())
 	play_attack_animation()
+	run_attack_hit()
+
+
+func run_attack_hit() -> void:
+	await get_tree().create_timer(attack_hit_delay).timeout
+
+	if not is_attacking:
+		return
+
+	attack_area.set_damage(get_attack_damage())
 	attack_area.deal_damage()
 
 
@@ -109,12 +131,17 @@ func update_facing_direction() -> void:
 
 #state
 func update_movement_state() -> void:
+	var previous_state: MovementState = movement_state
+
 	if is_dashing:
-		movement_state = "dashing"
+		movement_state = MovementState.DASHING
 	elif input_direction == Vector2.ZERO:
-		movement_state = "stationary"
+		movement_state = MovementState.STATIONARY
 	else:
-		movement_state = "walking"
+		movement_state = MovementState.WALKING
+
+	if movement_state != previous_state:
+		debug_state_changed.emit()
 
 
 #dash cooldown
@@ -173,41 +200,36 @@ func update_animation() -> void:
 		play_walk_animation()
 
 
-func play_idle_animation() -> void:
+func get_facing_suffix() -> String:
 	if abs(move_direction.x) >= abs(move_direction.y):
-		animated_sprite.play("idle_side")
+		return "side"
+	if move_direction.y > 0:
+		return "down"
+	return "up"
+
+
+func play_directional_animation(animation_prefix: String) -> void:
+	var facing_suffix: String = get_facing_suffix()
+
+	animated_sprite.play(animation_prefix + "_" + facing_suffix)
+
+	if facing_suffix == "side":
 		animated_sprite.flip_h = move_direction.x > 0
-	elif move_direction.y > 0:
-		animated_sprite.play("idle_down")
-		animated_sprite.flip_h = false
 	else:
-		animated_sprite.play("idle_up")
 		animated_sprite.flip_h = false
+
+
+func play_idle_animation() -> void:
+	play_directional_animation("idle")
 
 
 func play_walk_animation() -> void:
-	if abs(move_direction.x) >= abs(move_direction.y):
-		animated_sprite.play("walk_side")
-		animated_sprite.flip_h = move_direction.x > 0
-	elif move_direction.y > 0:
-		animated_sprite.play("walk_down")
-		animated_sprite.flip_h = false
-	else:
-		animated_sprite.play("walk_up")
-		animated_sprite.flip_h = false
+	play_directional_animation("walk")
 
 
 #attack animation
 func play_attack_animation() -> void:
-	if abs(move_direction.x) >= abs(move_direction.y):
-		animated_sprite.play("attack_side")
-		animated_sprite.flip_h = move_direction.x > 0
-	elif move_direction.y > 0:
-		animated_sprite.play("attack_down")
-		animated_sprite.flip_h = false
-	else:
-		animated_sprite.play("attack_up")
-		animated_sprite.flip_h = false
+	play_directional_animation("attack")
 
 
 #attack end
@@ -217,10 +239,7 @@ func _on_animated_sprite_2d_animation_finished() -> void:
 	
 	is_attacking = false
 	
-	if input_direction == Vector2.ZERO:
-		play_idle_animation()
-	else:
-		play_walk_animation()
+	update_animation()
 
 
 #hit flash
@@ -233,16 +252,36 @@ func play_hit_flash() -> void:
 	
 	await get_tree().create_timer(hit_flash_duration).timeout
 	
-	animated_sprite.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	animated_sprite.modulate = default_modulate
 	hit_flash_active = false
+
+func play_invulnerability_blink() -> void:
+	if invulnerability_blink_active:
+		return
+
+	invulnerability_blink_active = true
+
+	var total_blinks: int = max(invulnerability_blink_count, 1)
+	var blink_interval: float = max(hurtbox.invulnerability_duration / float(total_blinks * 2), 0.03)
+
+	for _blink in total_blinks:
+		animated_sprite.visible = false
+		await get_tree().create_timer(blink_interval).timeout
+		animated_sprite.visible = true
+		await get_tree().create_timer(blink_interval).timeout
+
+	animated_sprite.visible = true
+	invulnerability_blink_active = false
 
 func apply_hit_reaction(_from_position: Vector2, _damage: int) -> void:
 	play_hit_flash()
+	play_invulnerability_blink()
 
 #death
 func on_died() -> void:
 	set_physics_process(false)
 	attack_area.monitoring = false
 	$Hurtbox.monitoring = false
+	animated_sprite.visible = true
 	hide()
 	died.emit()

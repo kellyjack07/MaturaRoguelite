@@ -8,7 +8,6 @@ class_name HurtboxComponent
 var is_invulnerable: bool = false
 
 #damage
-#damage
 func take_hit(damage: int, from_position: Vector2) -> void:
 	if health_component == null:
 		return
@@ -21,8 +20,6 @@ func take_hit(damage: int, from_position: Vector2) -> void:
 	
 	if get_parent().has_method("apply_hit_reaction"):
 		get_parent().apply_hit_reaction(from_position, damage)
-	
-	print("damage taken")
 
 func start_invulnerability() -> void:
 	is_invulnerable = true

@@ -15,18 +15,26 @@ var hit_stop_scale: float = 0.05
 #start
 func _ready() -> void:
 	health_component.health_changed.connect(_on_player_health_changed)
+	player.debug_state_changed.connect(update_debug_ui)
 	death_screen.visible = false
 	_on_player_health_changed(health_component.current_health, health_component.max_health)
 	update_debug_ui()
 
 #debug ui
 func update_debug_ui() -> void:
-	state_label.text = "State: " + player.movement_state
+	state_label.text = "State: " + get_player_state_text()
 	multiplier_label.text = "Multiplier: " + str(player.get_damage_multiplier())
 	damage_label.text = "Last Damage: " + str(player.last_damage_dealt)
 
-func _process(_delta: float) -> void:
-	update_debug_ui()
+
+func get_player_state_text() -> String:
+	match player.movement_state:
+		player.MovementState.DASHING:
+			return "dashing"
+		player.MovementState.WALKING:
+			return "walking"
+		_:
+			return "stationary"
 
 #player death
 func _on_player_died() -> void:
