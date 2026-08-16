@@ -38,6 +38,7 @@ var dash_direction: Vector2 = Vector2.ZERO
 var dash_time_left: float = 0.0
 var dash_cooldown_left: float = 0.0
 var last_damage_dealt: int = 0
+var attack_direction: Vector2 = Vector2.DOWN
 
 signal died
 signal debug_state_changed
@@ -94,6 +95,7 @@ func get_attack_damage() -> int:
 #attack start
 func start_attack() -> void:
 	is_attacking = true
+	update_attack_direction()
 	attack_area.start_swing()
 	update_attack_area_direction()
 	play_attack_animation()
@@ -112,7 +114,17 @@ func run_attack_hit() -> void:
 
 #attack area
 func update_attack_area_direction() -> void:
-	attack_area.position = move_direction.normalized() * 12.0
+	attack_area.position = attack_direction.normalized() * 12.0
+	attack_area.rotation = attack_direction.angle()
+
+
+func update_attack_direction() -> void:
+	if is_dashing and dash_direction != Vector2.ZERO:
+		attack_direction = dash_direction.normalized()
+	elif input_direction != Vector2.ZERO:
+		attack_direction = input_direction.normalized()
+	else:
+		attack_direction = move_direction.normalized()
 
 
 #movement
