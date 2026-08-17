@@ -309,10 +309,13 @@ physics_layer_0/collision_layer = 1
 sources/0 = SubResource("TileSetAtlasSource_w7ic5")
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_w7ic5"]
-size = Vector2(30, 15)
+size = Vector2(96, 18)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_exit"]
 size = Vector2(42, 20)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_reward"]
+size = Vector2(18, 18)
 
 [node name="TestRoom" type="Node2D" unique_id=685673072]
 script = ExtResource("3_stage")
@@ -375,4 +378,31 @@ offset_right = 91.0
 offset_bottom = 147.0
 text = "Exit"
 
+[node name="RewardInteractable" type="Area2D" parent="." unique_id=1500000020]
+monitoring = false
+monitorable = false
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RewardInteractable" unique_id=1500000021]
+position = Vector2(-64, 32)
+shape = SubResource("RectangleShape2D_reward")
+disabled = true
+
+[node name="RewardDisplay" type="Polygon2D" parent="RewardInteractable" unique_id=1500000022]
+position = Vector2(-64, 32)
+visible = false
+polygon = PackedVector2Array(-9, -9, 9, -9, 9, 9, -9, 9)
+color = Color(0.909804, 0.729412, 0.215686, 1)
+
+[node name="PromptLabel" type="Label" parent="RewardInteractable" unique_id=1500000023]
+visible = false
+offset_left = -101.0
+offset_top = 43.0
+offset_right = -27.0
+offset_bottom = 79.0
+text = "Press E\nReward"
+horizontal_alignment = 1
+
 [connection signal="body_entered" from="ExitArea" to="." method="_on_exit_area_body_entered"]
+[connection signal="body_entered" from="RewardInteractable" to="." method="_on_reward_interactable_body_entered"]
+[connection signal="body_exited" from="RewardInteractable" to="." method="_on_reward_interactable_body_exited"]

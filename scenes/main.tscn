@@ -414,6 +414,85 @@ grow_vertical = 2
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="RoomEventScreen" type="Control" parent="UI" unique_id=1600000060]
+process_mode = 2
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+
+[node name="Background" type="ColorRect" parent="UI/RoomEventScreen" unique_id=1600000061]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+color = Color(0, 0, 0, 0.45)
+
+[node name="Panel" type="Panel" parent="UI/RoomEventScreen" unique_id=1600000062]
+layout_mode = 0
+offset_left = 157.0
+offset_top = 66.0
+offset_right = 483.0
+offset_bottom = 280.0
+mouse_filter = 1
+
+[node name="TitleLabel" type="Label" parent="UI/RoomEventScreen/Panel" unique_id=1600000063]
+layout_mode = 0
+offset_left = 31.0
+offset_top = 18.0
+offset_right = 295.0
+offset_bottom = 43.0
+text = "Room Event"
+horizontal_alignment = 1
+
+[node name="BodyLabel" type="Label" parent="UI/RoomEventScreen/Panel" unique_id=1600000064]
+layout_mode = 0
+offset_left = 28.0
+offset_top = 53.0
+offset_right = 298.0
+offset_bottom = 111.0
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="StatusLabel" type="Label" parent="UI/RoomEventScreen/Panel" unique_id=1600000065]
+layout_mode = 0
+offset_left = 27.0
+offset_top = 112.0
+offset_right = 299.0
+offset_bottom = 135.0
+horizontal_alignment = 1
+
+[node name="PrimaryButton" type="Button" parent="UI/RoomEventScreen/Panel" unique_id=1600000066]
+layout_mode = 0
+offset_left = 68.0
+offset_top = 149.0
+offset_right = 258.0
+offset_bottom = 180.0
+text = "Confirm"
+
+[node name="SecondaryButton" type="Button" parent="UI/RoomEventScreen/Panel" unique_id=1600000067]
+layout_mode = 0
+offset_left = 68.0
+offset_top = 186.0
+offset_right = 258.0
+offset_bottom = 217.0
+text = "Secondary"
+
+[node name="TertiaryButton" type="Button" parent="UI/RoomEventScreen/Panel" unique_id=1600000068]
+layout_mode = 0
+offset_left = 68.0
+offset_top = 223.0
+offset_right = 258.0
+offset_bottom = 254.0
+text = "Close"
+
 [node name="HealthLabel" type="Label" parent="UI" unique_id=1089053381]
 offset_right = 40.0
 offset_bottom = 23.0

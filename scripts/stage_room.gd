@@ -1,21 +1,78 @@
 extends Node2D
 class_name StageRoom
 
-signal exit_requested
+signal room_entered(room: StageRoom)
+signal reward_interaction_requested(room: StageRoom)
+signal stage_exit_requested(room: StageRoom)
 
-@onready var enemy_door_blocker: StaticBody2D = $EnemyDoorBlocker
-@onready var enemy_door_blocker_shape: CollisionShape2D = $EnemyDoorBlocker/CollisionShape2D
+const ROOM_COLORS := {
+	"start": Color(0.19, 0.25, 0.36, 1.0),
+	"combat": Color(0.32, 0.18, 0.18, 1.0),
+	"boss": Color(0.43, 0.12, 0.12, 1.0),
+	"reward": Color(0.36, 0.29, 0.14, 1.0),
+	"rest": Color(0.16, 0.31, 0.23, 1.0),
+	"debuff": Color(0.30, 0.15, 0.32, 1.0),
+}
+
+@onready var floor_polygon: Polygon2D = $Floor
+@onready var room_label: Label = $RoomLabel
 @onready var player_spawn: Marker2D = $Markers/PlayerSpawn
-@onready var exit_point: Marker2D = $Markers/ExitPoint
+@onready var north_door: Marker2D = $Markers/NorthDoor
+@onready var south_door: Marker2D = $Markers/SouthDoor
+@onready var west_door: Marker2D = $Markers/WestDoor
+@onready var east_door: Marker2D = $Markers/EastDoor
 @onready var enemy_spawns_root: Node2D = $Markers/EnemySpawns
-@onready var exit_area: Area2D = $ExitArea
-@onready var exit_label: Label = $ExitArea/ExitLabel
+@onready var activation_zone: Area2D = $ActivationZone
+@onready var reward_interactable: Area2D = $RewardInteractable
+@onready var reward_interactable_shape: CollisionShape2D = $RewardInteractable/CollisionShape2D
+@onready var reward_prompt_label: Label = $RewardInteractable/PromptLabel
+@onready var reward_display: Polygon2D = $RewardInteractable/RewardDisplay
+@onready var stage_exit_interactable: Area2D = $StageExitInteractable
+@onready var stage_exit_interactable_shape: CollisionShape2D = $StageExitInteractable/CollisionShape2D
+@onready var stage_exit_prompt_label: Label = $StageExitInteractable/PromptLabel
+@onready var stage_exit_display: Polygon2D = $StageExitInteractable/ExitDisplay
+@onready var north_connection: Polygon2D = $ConnectionIndicators/NorthConnection
+@onready var south_connection: Polygon2D = $ConnectionIndicators/SouthConnection
+@onready var west_connection: Polygon2D = $ConnectionIndicators/WestConnection
+@onready var east_connection: Polygon2D = $ConnectionIndicators/EastConnection
+@onready var door_root: Node = get_node_or_null("Door")
+
+var room_id: int = -1
+var room_type_name: String = "combat"
+var connection_directions: Array[String] = []
+var player_in_reward_range: bool = false
+var player_in_stage_exit_range: bool = false
 
 
 #setup
 func _ready() -> void:
-	validate_room_layout()
-	lock_exit()
+	hide_reward_interactable()
+	hide_stage_exit()
+	update_connection_indicators()
+
+
+func configure(new_room_id: int, new_room_type_name: String, new_connection_directions: Array[String]) -> void:
+	room_id = new_room_id
+	room_type_name = new_room_type_name
+	connection_directions = new_connection_directions.duplicate()
+	update_room_visuals()
+	update_connection_indicators()
+	set_connected_doors_locked(false)
+
+
+func update_room_visuals() -> void:
+	floor_polygon.color = ROOM_COLORS.get(room_type_name, ROOM_COLORS["combat"])
+	room_label.text = room_type_name.capitalize()
+
+
+func update_connection_indicators() -> void:
+	if not is_node_ready():
+		return
+
+	north_connection.visible = connection_directions.has("north")
+	south_connection.visible = connection_directions.has("south")
+	west_connection.visible = connection_directions.has("west")
+	east_connection.visible = connection_directions.has("east")
 
 
 #spawns
@@ -33,39 +90,157 @@ func get_enemy_spawn_positions() -> Array[Vector2]:
 	return spawn_positions
 
 
-func get_exit_position() -> Vector2:
-	return exit_point.global_position
+func get_door_world_position(direction: String) -> Vector2:
+	match direction:
+		"north":
+			return north_door.global_position
+		"south":
+			return south_door.global_position
+		"west":
+			return west_door.global_position
+		"east":
+			return east_door.global_position
+		_:
+			return global_position
 
 
-#exit
-func lock_exit() -> void:
-	enemy_door_blocker_shape.disabled = false
-	exit_area.monitoring = false
-	exit_area.monitorable = false
-	exit_label.visible = false
+func set_connected_doors_locked(locked: bool) -> void:
+	for direction in connection_directions:
+		set_direction_door_locked(str(direction), locked)
 
 
-func unlock_exit() -> void:
-	enemy_door_blocker_shape.disabled = true
-	exit_area.monitoring = true
-	exit_area.monitorable = true
-	exit_label.visible = true
+func set_direction_door_locked(direction: String, locked: bool) -> void:
+	if door_root == null:
+		return
+
+	var direction_name: String = direction.capitalize()
+	var blocker_shape := get_node_or_null("Door/%sDoorBlocker/CollisionShape2D" % direction_name) as CollisionShape2D
+	if blocker_shape != null:
+		blocker_shape.set_deferred("disabled", not locked)
+
+	var single_sprite := get_node_or_null("Door/%sDoor" % direction_name) as AnimatedSprite2D
+	if single_sprite != null:
+		var single_animation_name: String = "%sDoor%s" % [direction_name, "Close" if locked else "Open"]
+		if single_sprite.sprite_frames != null and single_sprite.sprite_frames.has_animation(single_animation_name):
+			single_sprite.play(single_animation_name)
+
+	var top_sprite := get_node_or_null("Door/%sDoorTop" % direction_name) as AnimatedSprite2D
+	if top_sprite != null:
+		var top_animation_name: String = "%sDoorTop%s" % [direction_name, "Close" if locked else "Open"]
+		if top_sprite.sprite_frames != null and top_sprite.sprite_frames.has_animation(top_animation_name):
+			top_sprite.play(top_animation_name)
+
+	var bottom_sprite := get_node_or_null("Door/%sDoorBottom" % direction_name) as AnimatedSprite2D
+	if bottom_sprite != null:
+		var bottom_animation_name: String = "%sDoorBottom%s" % [direction_name, "Close" if locked else "Open"]
+		if bottom_sprite.sprite_frames != null and bottom_sprite.sprite_frames.has_animation(bottom_animation_name):
+			bottom_sprite.play(bottom_animation_name)
 
 
-func set_exit_text(new_text: String) -> void:
-	exit_label.text = new_text
+#ui helpers
+func set_room_label(new_text: String) -> void:
+	room_label.text = new_text
 
 
-func validate_room_layout() -> void:
-	var spawn_distance: float = player_spawn.global_position.distance_to(get_exit_position())
-	if spawn_distance < 32.0:
-		push_warning("Player spawn and exit are too close together in room: " + name)
+func set_room_state(is_current_room: bool, is_visited: bool, is_revealed: bool) -> void:
+	if is_current_room:
+		modulate = Color(1.0, 1.0, 1.0, 1.0)
+	elif is_visited:
+		modulate = Color(0.9, 0.9, 0.9, 0.9)
+	elif is_revealed:
+		modulate = Color(0.72, 0.72, 0.72, 0.72)
+	else:
+		modulate = Color(0.45, 0.45, 0.45, 0.6)
 
 
-func _on_exit_area_body_entered(body: Node2D) -> void:
+func show_reward_interactable(prompt_text: String = "Press E\nReward") -> void:
+	reward_interactable.set_deferred("monitoring", true)
+	reward_interactable.set_deferred("monitorable", true)
+	reward_interactable_shape.set_deferred("disabled", false)
+	reward_display.visible = true
+	reward_prompt_label.text = prompt_text
+	reward_prompt_label.visible = player_in_reward_range
+
+
+func hide_reward_interactable() -> void:
+	reward_interactable.set_deferred("monitoring", false)
+	reward_interactable.set_deferred("monitorable", false)
+	reward_interactable_shape.set_deferred("disabled", true)
+	reward_display.visible = false
+	reward_prompt_label.visible = false
+	player_in_reward_range = false
+
+
+func show_stage_exit(prompt_text: String = "Press E\nEnter Portal") -> void:
+	stage_exit_interactable.set_deferred("monitoring", true)
+	stage_exit_interactable.set_deferred("monitorable", true)
+	stage_exit_interactable_shape.set_deferred("disabled", false)
+	stage_exit_display.visible = true
+	stage_exit_prompt_label.text = prompt_text
+	stage_exit_prompt_label.visible = player_in_stage_exit_range
+
+
+func hide_stage_exit() -> void:
+	stage_exit_interactable.set_deferred("monitoring", false)
+	stage_exit_interactable.set_deferred("monitorable", false)
+	stage_exit_interactable_shape.set_deferred("disabled", true)
+	stage_exit_display.visible = false
+	stage_exit_prompt_label.visible = false
+	player_in_stage_exit_range = false
+
+
+#input
+func _unhandled_input(event: InputEvent) -> void:
+	if not event.is_action_pressed("interact"):
+		return
+
+	if player_in_stage_exit_range and stage_exit_interactable.monitoring:
+		get_viewport().set_input_as_handled()
+		stage_exit_requested.emit(self)
+		return
+
+	if player_in_reward_range and reward_interactable.monitoring:
+		get_viewport().set_input_as_handled()
+		reward_interaction_requested.emit(self)
+
+
+#signals
+func _on_activation_zone_body_entered(body: Node2D) -> void:
+	if body.is_in_group("player"):
+		call_deferred("_emit_room_entered")
+
+
+func _emit_room_entered() -> void:
+	room_entered.emit(self)
+
+
+func _on_reward_interactable_body_entered(body: Node2D) -> void:
 	if not body.is_in_group("player"):
 		return
-	if not exit_area.monitoring:
+
+	player_in_reward_range = true
+	reward_prompt_label.visible = reward_interactable.monitoring
+
+
+func _on_reward_interactable_body_exited(body: Node2D) -> void:
+	if not body.is_in_group("player"):
 		return
 
-	exit_requested.emit()
+	player_in_reward_range = false
+	reward_prompt_label.visible = false
+
+
+func _on_stage_exit_interactable_body_entered(body: Node2D) -> void:
+	if not body.is_in_group("player"):
+		return
+
+	player_in_stage_exit_range = true
+	stage_exit_prompt_label.visible = stage_exit_interactable.monitoring
+
+
+func _on_stage_exit_interactable_body_exited(body: Node2D) -> void:
+	if not body.is_in_group("player"):
+		return
+
+	player_in_stage_exit_range = false
+	stage_exit_prompt_label.visible = false

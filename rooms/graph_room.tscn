@@ -1,0 +1,209 @@
+[gd_scene format=3 uid="uid://dmpv7qusoqstu"]
+
+[ext_resource type="Script" uid="uid://cjk3uarbgfq1c" path="res://scripts/stage_room.gd" id="1_stage"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_h"]
+size = Vector2(92, 12)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_v"]
+size = Vector2(12, 60)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_activation_zone"]
+size = Vector2(120, 72)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_room_bounds"]
+size = Vector2(196, 132)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_interact"]
+size = Vector2(24, 24)
+
+[node name="GraphRoom" type="Node2D"]
+script = ExtResource("1_stage")
+
+[node name="Floor" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-112, -80, 112, -80, 112, 80, -112, 80)
+color = Color(0.32, 0.18, 0.18, 1)
+
+[node name="Walls" type="Node2D" parent="."]
+
+[node name="TopLeftWall" type="StaticBody2D" parent="Walls"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/TopLeftWall"]
+position = Vector2(-66, -80)
+shape = SubResource("RectangleShape2D_wall_h")
+
+[node name="TopRightWall" type="StaticBody2D" parent="Walls"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/TopRightWall"]
+position = Vector2(66, -80)
+shape = SubResource("RectangleShape2D_wall_h")
+
+[node name="BottomLeftWall" type="StaticBody2D" parent="Walls"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/BottomLeftWall"]
+position = Vector2(-66, 80)
+shape = SubResource("RectangleShape2D_wall_h")
+
+[node name="BottomRightWall" type="StaticBody2D" parent="Walls"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/BottomRightWall"]
+position = Vector2(66, 80)
+shape = SubResource("RectangleShape2D_wall_h")
+
+[node name="LeftTopWall" type="StaticBody2D" parent="Walls"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/LeftTopWall"]
+position = Vector2(-112, -44)
+shape = SubResource("RectangleShape2D_wall_v")
+
+[node name="LeftBottomWall" type="StaticBody2D" parent="Walls"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/LeftBottomWall"]
+position = Vector2(-112, 44)
+shape = SubResource("RectangleShape2D_wall_v")
+
+[node name="RightTopWall" type="StaticBody2D" parent="Walls"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/RightTopWall"]
+position = Vector2(112, -44)
+shape = SubResource("RectangleShape2D_wall_v")
+
+[node name="RightBottomWall" type="StaticBody2D" parent="Walls"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/RightBottomWall"]
+position = Vector2(112, 44)
+shape = SubResource("RectangleShape2D_wall_v")
+
+[node name="ConnectionIndicators" type="Node2D" parent="."]
+
+[node name="NorthConnection" type="Polygon2D" parent="ConnectionIndicators"]
+visible = false
+position = Vector2(0, -80)
+polygon = PackedVector2Array(-18, -6, 18, -6, 18, 6, -18, 6)
+color = Color(0.82, 0.82, 0.82, 1)
+
+[node name="SouthConnection" type="Polygon2D" parent="ConnectionIndicators"]
+visible = false
+position = Vector2(0, 80)
+polygon = PackedVector2Array(-18, -6, 18, -6, 18, 6, -18, 6)
+color = Color(0.82, 0.82, 0.82, 1)
+
+[node name="WestConnection" type="Polygon2D" parent="ConnectionIndicators"]
+visible = false
+position = Vector2(-112, 0)
+polygon = PackedVector2Array(-6, -18, 6, -18, 6, 18, -6, 18)
+color = Color(0.82, 0.82, 0.82, 1)
+
+[node name="EastConnection" type="Polygon2D" parent="ConnectionIndicators"]
+visible = false
+position = Vector2(112, 0)
+polygon = PackedVector2Array(-6, -18, 6, -18, 6, 18, -6, 18)
+color = Color(0.82, 0.82, 0.82, 1)
+
+[node name="Markers" type="Node2D" parent="."]
+
+[node name="PlayerSpawn" type="Marker2D" parent="Markers"]
+
+[node name="NorthDoor" type="Marker2D" parent="Markers"]
+position = Vector2(0, -80)
+
+[node name="SouthDoor" type="Marker2D" parent="Markers"]
+position = Vector2(0, 80)
+
+[node name="WestDoor" type="Marker2D" parent="Markers"]
+position = Vector2(-112, 0)
+
+[node name="EastDoor" type="Marker2D" parent="Markers"]
+position = Vector2(112, 0)
+
+[node name="EnemySpawns" type="Node2D" parent="Markers"]
+
+[node name="Spawn1" type="Marker2D" parent="Markers/EnemySpawns"]
+position = Vector2(-40, -16)
+
+[node name="Spawn2" type="Marker2D" parent="Markers/EnemySpawns"]
+position = Vector2(40, -16)
+
+[node name="Spawn3" type="Marker2D" parent="Markers/EnemySpawns"]
+position = Vector2(-28, 28)
+
+[node name="Spawn4" type="Marker2D" parent="Markers/EnemySpawns"]
+position = Vector2(28, 28)
+
+[node name="ActivationZone" type="Area2D" parent="."]
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ActivationZone"]
+shape = SubResource("RectangleShape2D_activation_zone")
+
+[node name="RoomBounds" type="Area2D" parent="."]
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RoomBounds"]
+shape = SubResource("RectangleShape2D_room_bounds")
+
+[node name="RewardInteractable" type="Area2D" parent="."]
+monitoring = false
+monitorable = false
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RewardInteractable"]
+position = Vector2(48, 0)
+shape = SubResource("RectangleShape2D_interact")
+disabled = true
+
+[node name="RewardDisplay" type="Polygon2D" parent="RewardInteractable"]
+position = Vector2(48, 0)
+visible = false
+polygon = PackedVector2Array(-12, -12, 12, -12, 12, 12, -12, 12)
+color = Color(0.91, 0.73, 0.22, 1)
+
+[node name="PromptLabel" type="Label" parent="RewardInteractable"]
+visible = false
+offset_left = 11.0
+offset_top = 18.0
+offset_right = 85.0
+offset_bottom = 54.0
+text = "Press E
+Reward"
+horizontal_alignment = 1
+
+[node name="StageExitInteractable" type="Area2D" parent="."]
+monitoring = false
+monitorable = false
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StageExitInteractable"]
+position = Vector2(0, -28)
+shape = SubResource("RectangleShape2D_interact")
+disabled = true
+
+[node name="ExitDisplay" type="Polygon2D" parent="StageExitInteractable"]
+position = Vector2(0, -28)
+visible = false
+polygon = PackedVector2Array(-12, -12, 12, -12, 12, 12, -12, 12)
+color = Color(0.37, 0.71, 0.98, 1)
+
+[node name="PromptLabel" type="Label" parent="StageExitInteractable"]
+visible = false
+offset_left = -41.0
+offset_top = -6.0
+offset_right = 41.0
+offset_bottom = 30.0
+text = "Press E
+Enter Portal"
+horizontal_alignment = 1
+
+[node name="RoomLabel" type="Label" parent="."]
+offset_left = -56.0
+offset_top = -110.0
+offset_right = 56.0
+offset_bottom = -84.0
+text = "Combat"
+horizontal_alignment = 1
+
+[connection signal="body_entered" from="ActivationZone" to="." method="_on_activation_zone_body_entered"]
+[connection signal="body_entered" from="RewardInteractable" to="." method="_on_reward_interactable_body_entered"]
+[connection signal="body_exited" from="RewardInteractable" to="." method="_on_reward_interactable_body_exited"]
+[connection signal="body_entered" from="StageExitInteractable" to="." method="_on_stage_exit_interactable_body_entered"]
+[connection signal="body_exited" from="StageExitInteractable" to="." method="_on_stage_exit_interactable_body_exited"]
