@@ -5,6 +5,8 @@ signal room_entered(room: StageRoom)
 signal reward_interaction_requested(room: StageRoom)
 signal stage_exit_requested(room: StageRoom)
 
+const ROOM_ACTIVATION_SETTINGS := preload("res://data/room_activation_settings.tres")
+
 const ROOM_COLORS := {
 	"start": Color(0.19, 0.25, 0.36, 1.0),
 	"combat": Color(0.32, 0.18, 0.18, 1.0),
@@ -23,6 +25,7 @@ const ROOM_COLORS := {
 @onready var east_door: Marker2D = $Markers/EastDoor
 @onready var enemy_spawns_root: Node2D = $Markers/EnemySpawns
 @onready var activation_zone: Area2D = $ActivationZone
+@onready var activation_zone_shape: CollisionShape2D = $ActivationZone/CollisionShape2D
 @onready var reward_interactable: Area2D = $RewardInteractable
 @onready var reward_interactable_shape: CollisionShape2D = $RewardInteractable/CollisionShape2D
 @onready var reward_prompt_label: Label = $RewardInteractable/PromptLabel
@@ -46,6 +49,7 @@ var player_in_stage_exit_range: bool = false
 
 #setup
 func _ready() -> void:
+	apply_global_activation_zone_settings()
 	hide_reward_interactable()
 	hide_stage_exit()
 	update_connection_indicators()
@@ -90,6 +94,19 @@ func get_enemy_spawn_positions() -> Array[Vector2]:
 	return spawn_positions
 
 
+func apply_global_activation_zone_settings() -> void:
+	if activation_zone_shape == null:
+		return
+
+	activation_zone.position = ROOM_ACTIVATION_SETTINGS.activation_zone_offset
+	var rectangle_shape := activation_zone_shape.shape as RectangleShape2D
+	if rectangle_shape == null:
+		rectangle_shape = RectangleShape2D.new()
+		activation_zone_shape.shape = rectangle_shape
+
+	rectangle_shape.size = ROOM_ACTIVATION_SETTINGS.activation_zone_size
+
+
 func get_door_world_position(direction: String) -> Vector2:
 	match direction:
 		"north":
@@ -110,31 +127,72 @@ func set_connected_doors_locked(locked: bool) -> void:
 
 
 func set_direction_door_locked(direction: String, locked: bool) -> void:
-	if door_root == null:
+	var direction_name: String = direction.capitalize()
+	var direction_door_nodes: Array[Node] = get_direction_door_nodes(direction_name)
+	if direction_door_nodes.is_empty():
 		return
 
-	var direction_name: String = direction.capitalize()
-	var blocker_shape := get_node_or_null("Door/%sDoorBlocker/CollisionShape2D" % direction_name) as CollisionShape2D
-	if blocker_shape != null:
-		blocker_shape.set_deferred("disabled", not locked)
+	for door_node in direction_door_nodes:
+		var blocker_shape: CollisionShape2D = get_door_blocker_shape(door_node, direction_name)
+		if blocker_shape != null:
+			blocker_shape.set_deferred("disabled", not locked)
 
-	var single_sprite := get_node_or_null("Door/%sDoor" % direction_name) as AnimatedSprite2D
-	if single_sprite != null:
-		var single_animation_name: String = "%sDoor%s" % [direction_name, "Close" if locked else "Open"]
-		if single_sprite.sprite_frames != null and single_sprite.sprite_frames.has_animation(single_animation_name):
-			single_sprite.play(single_animation_name)
+		play_matching_door_animations(door_node, direction_name, locked)
 
-	var top_sprite := get_node_or_null("Door/%sDoorTop" % direction_name) as AnimatedSprite2D
-	if top_sprite != null:
-		var top_animation_name: String = "%sDoorTop%s" % [direction_name, "Close" if locked else "Open"]
-		if top_sprite.sprite_frames != null and top_sprite.sprite_frames.has_animation(top_animation_name):
-			top_sprite.play(top_animation_name)
 
-	var bottom_sprite := get_node_or_null("Door/%sDoorBottom" % direction_name) as AnimatedSprite2D
-	if bottom_sprite != null:
-		var bottom_animation_name: String = "%sDoorBottom%s" % [direction_name, "Close" if locked else "Open"]
-		if bottom_sprite.sprite_frames != null and bottom_sprite.sprite_frames.has_animation(bottom_animation_name):
-			bottom_sprite.play(bottom_animation_name)
+func get_direction_door_nodes(direction_name: String) -> Array[Node]:
+	var nodes: Array[Node] = []
+	var direct_door_node: Node = get_node_or_null("%sDoor" % direction_name)
+	if direct_door_node != null:
+		nodes.append(direct_door_node)
+
+	if door_root != null:
+		nodes.append(door_root)
+
+	return nodes
+
+
+func get_door_blocker_shape(door_node: Node, direction_name: String) -> CollisionShape2D:
+	var named_blocker_shape := get_node_or_null("%s/%sDoorBlocker/CollisionShape2D" % [door_node.get_path(), direction_name]) as CollisionShape2D
+	if named_blocker_shape != null:
+		return named_blocker_shape
+
+	var blocker_nodes: Array[Node] = door_node.find_children("*DoorBlocker", "StaticBody2D", true, false)
+	for blocker_node in blocker_nodes:
+		var blocker_shape := get_node_or_null("%s/CollisionShape2D" % blocker_node.get_path()) as CollisionShape2D
+		if blocker_shape != null:
+			return blocker_shape
+
+	return null
+
+
+func play_matching_door_animations(door_node: Node, direction_name: String, locked: bool) -> void:
+	var animation_suffix: String = "Close" if locked else "Open"
+	var animated_sprites: Array[Node] = door_node.find_children("*", "AnimatedSprite2D", true, false)
+
+	for animated_node in animated_sprites:
+		var sprite := animated_node as AnimatedSprite2D
+		if sprite == null or sprite.sprite_frames == null:
+			continue
+
+		var chosen_animation_name: String = ""
+		for animation_name in sprite.sprite_frames.get_animation_names():
+			var animation_name_string: String = str(animation_name)
+			if animation_name_string.begins_with("%sDoor" % direction_name) and animation_name_string.ends_with(animation_suffix):
+				chosen_animation_name = animation_name_string
+				break
+
+		if chosen_animation_name.is_empty():
+			for animation_name in sprite.sprite_frames.get_animation_names():
+				var animation_name_string: String = str(animation_name)
+				if animation_name_string.ends_with(animation_suffix):
+					chosen_animation_name = animation_name_string
+					break
+
+		if chosen_animation_name.is_empty():
+			continue
+
+		sprite.play(chosen_animation_name)
 
 
 #ui helpers

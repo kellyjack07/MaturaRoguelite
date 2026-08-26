@@ -565,6 +565,7 @@ height = 24.0
 z_index = 10
 collision_layer = 2
 script = ExtResource("1_qhqgy")
+base_attack_damage = 5
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1375415653]
 sprite_frames = SubResource("SpriteFrames_6e8lb")
@@ -581,7 +582,7 @@ zoom = Vector2(2, 2)
 
 [node name="Health" type="Node" parent="." unique_id=2027964474]
 script = ExtResource("5_qlg0r")
-max_health = 10
+max_health = 25
 
 [node name="AttackArea" type="Area2D" parent="." unique_id=1575710335]
 script = ExtResource("6_tuyoq")

@@ -3,8 +3,14 @@ class_name HitboxComponent
 
 @export var damage: int = 1
 @export var max_targets_per_swing: int = 2
+@onready var collision_shape: CollisionShape2D = $CollisionShape2D
 var current_damage: int = 1
 var already_hit_hurtboxes: Array[HurtboxComponent] = []
+var hitbox_active: bool = false
+
+
+func _ready() -> void:
+	set_hitbox_active(false)
 
 #damage set
 func set_damage(new_damage: int) -> void:
@@ -13,10 +19,21 @@ func set_damage(new_damage: int) -> void:
 
 func start_swing() -> void:
 	already_hit_hurtboxes.clear()
+	set_hitbox_active(false)
+
+
+func set_hitbox_active(active: bool) -> void:
+	hitbox_active = active
+	monitoring = active
+	if collision_shape != null:
+		collision_shape.set_deferred("disabled", not active)
 
 
 #hit
 func deal_damage() -> void:
+	if not hitbox_active:
+		return
+
 	var shape: Shape2D = $CollisionShape2D.shape
 	var query := PhysicsShapeQueryParameters2D.new()
 	
@@ -54,3 +71,5 @@ func deal_damage() -> void:
 
 		if get_tree().current_scene.has_method("trigger_hit_stop"):
 			get_tree().current_scene.trigger_hit_stop()
+
+	set_hitbox_active(false)

@@ -35,67 +35,68 @@ color = Color(0.0627451, 0.0705882, 0.0941176, 1)
 [node name="TitleLabel" type="Label" parent="UI/MainMenuScreen" unique_id=1600000003]
 layout_mode = 0
 offset_left = 244.0
-offset_top = 44.0
+offset_top = 34.0
 offset_right = 397.0
-offset_bottom = 74.0
+offset_bottom = 64.0
 text = "Matura Roguelite"
 horizontal_alignment = 1
 
 [node name="MenuStatusLabel" type="Label" parent="UI/MainMenuScreen" unique_id=1600000004]
 layout_mode = 0
 offset_left = 190.0
-offset_top = 82.0
+offset_top = 72.0
 offset_right = 451.0
-offset_bottom = 130.0
+offset_bottom = 120.0
 horizontal_alignment = 1
 
 [node name="StartRunButton" type="Button" parent="UI/MainMenuScreen" unique_id=1600000005]
 layout_mode = 0
 offset_left = 260.0
-offset_top = 144.0
+offset_top = 134.0
 offset_right = 380.0
-offset_bottom = 175.0
+offset_bottom = 165.0
 text = "Start Run"
 
 [node name="ContinueRunButton" type="Button" parent="UI/MainMenuScreen" unique_id=1600000052]
 visible = false
 layout_mode = 0
 offset_left = 260.0
-offset_top = 184.0
+offset_top = 174.0
 offset_right = 380.0
-offset_bottom = 215.0
+offset_bottom = 205.0
 text = "Continue Run"
 
 [node name="GearStoreButton" type="Button" parent="UI/MainMenuScreen" unique_id=1600000006]
+visible = false
 layout_mode = 0
 offset_left = 260.0
-offset_top = 224.0
+offset_top = 214.0
 offset_right = 380.0
-offset_bottom = 255.0
+offset_bottom = 245.0
 text = "Gear Store"
 
 [node name="SettingsButton" type="Button" parent="UI/MainMenuScreen" unique_id=1600000007]
 layout_mode = 0
 offset_left = 260.0
-offset_top = 264.0
+offset_top = 254.0
 offset_right = 380.0
-offset_bottom = 295.0
+offset_bottom = 285.0
 text = "Settings"
 
 [node name="ResetSaveButton" type="Button" parent="UI/MainMenuScreen" unique_id=1600000053]
 layout_mode = 0
 offset_left = 260.0
-offset_top = 304.0
+offset_top = 294.0
 offset_right = 380.0
-offset_bottom = 335.0
+offset_bottom = 325.0
 text = "Reset Save"
 
 [node name="QuitButton" type="Button" parent="UI/MainMenuScreen" unique_id=1600000008]
 layout_mode = 0
 offset_left = 260.0
-offset_top = 344.0
+offset_top = 331.0
 offset_right = 380.0
-offset_bottom = 375.0
+offset_bottom = 362.0
 text = "Quit Game"
 
 [node name="GearStoreScreen" type="Control" parent="UI" unique_id=1600000010]

@@ -11,7 +11,7 @@ enum MovementState {
 @export var dash_duration: float = 0.15
 @export var dash_cooldown: float = 0.5
 
-@export var base_attack_damage: int = 8
+@export var base_attack_damage: int = 50
 @export var stationary_multiplier: float = 1.0
 @export var walking_multiplier: float = 1.25
 @export var dashing_multiplier: float = 1.75
@@ -109,6 +109,7 @@ func run_attack_hit() -> void:
 		return
 
 	attack_area.set_damage(get_attack_damage())
+	attack_area.set_hitbox_active(true)
 	attack_area.deal_damage()
 
 
@@ -249,6 +250,7 @@ func _on_animated_sprite_2d_animation_finished() -> void:
 	if not animated_sprite.animation.begins_with("attack"):
 		return
 	
+	attack_area.set_hitbox_active(false)
 	is_attacking = false
 	
 	update_animation()
@@ -292,7 +294,7 @@ func apply_hit_reaction(_from_position: Vector2, _damage: int) -> void:
 #death
 func on_died() -> void:
 	set_physics_process(false)
-	attack_area.monitoring = false
+	attack_area.set_hitbox_active(false)
 	$Hurtbox.monitoring = false
 	animated_sprite.visible = true
 	hide()

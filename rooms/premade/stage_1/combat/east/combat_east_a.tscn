@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://cjk3uarbgfq1c" path="res://scripts/stage_room.gd" id="1_6ibqr"]
 [ext_resource type="Texture2D" uid="uid://llue1gdy0ou2" path="res://assets/Tileset_dungeon/free-2d-top-down-pixel-dungeon-asset-pack/PNG/walls_floor.png" id="2_nmquj"]
+[ext_resource type="TileSet" uid="uid://drhdurr37fyjp" path="res://rooms/premade/shared/wall_tileset.tres" id="3_omqt2"]
 [ext_resource type="Texture2D" uid="uid://dtiatxxssefe2" path="res://assets/Tileset_dungeon/free-2d-top-down-pixel-dungeon-asset-pack/PNG/Objects.png" id="3_q3s41"]
 [ext_resource type="Texture2D" uid="uid://dlj1g85olnprw" path="res://assets/Tileset_dungeon/free-2d-top-down-pixel-dungeon-asset-pack/PNG/water_detilazation_v2.png" id="4_omqt2"]
 [ext_resource type="Texture2D" uid="uid://c5cbrm8c87hjy" path="res://assets/placeholder/2D Pixel Dungeon Asset Pack/character and tileset/Dungeon_Tileset.png" id="5_oknty"]
@@ -29,78 +30,56 @@ texture = ExtResource("2_nmquj")
 1:2/size_in_atlas = Vector2i(1, 3)
 1:2/0 = 0
 1:2/0/z_index = 2
-1:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -24, 8, -24, 8, 24, -8, 24)
 0:2/size_in_atlas = Vector2i(1, 3)
 0:2/0 = 0
 0:2/0/z_index = 2
-0:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -24, 8, -24, 8, 24, -8, 24)
 0:1/0 = 0
 0:1/0/z_index = 2
-0:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 2:1/0 = 0
 2:1/0/z_index = 2
-2:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 2:2/size_in_atlas = Vector2i(1, 3)
 2:2/0 = 0
 2:2/0/z_index = 2
-2:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -24, 8, -24, 8, 24, -8, 24)
 10:11/size_in_atlas = Vector2i(1, 3)
 10:11/0 = 0
 10:11/0/z_index = 2
-10:11/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -24, 8, -24, 8, 24, -8, 24)
 11:11/size_in_atlas = Vector2i(1, 3)
 11:11/0 = 0
 11:11/0/z_index = 2
-11:11/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -24, 8, -24, 8, 24, -8, 24)
 12:11/size_in_atlas = Vector2i(1, 3)
 12:11/0 = 0
 12:11/0/z_index = 2
-12:11/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -24, 8, -24, 8, 24, -8, 24)
 11:10/0 = 0
 11:10/0/z_index = 2
-11:10/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 10:10/0 = 0
 10:10/0/z_index = 2
-10:10/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 12:10/0 = 0
 12:10/0/z_index = 2
-12:10/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 3:3/0 = 0
 3:3/0/z_index = 2
-3:3/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 3:1/size_in_atlas = Vector2i(1, 2)
 3:1/0 = 0
 3:1/0/z_index = 2
-3:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -16, 8, -16, 8, 16, -8, 16)
 3:0/0 = 0
 3:0/0/z_index = 2
-3:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 4:0/0 = 0
 4:0/0/z_index = 2
-4:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 5:0/0 = 0
 5:0/0/z_index = 2
-5:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 5:1/size_in_atlas = Vector2i(1, 2)
 5:1/0 = 0
 5:1/0/z_index = 2
-5:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -16, 8, -16, 8, 16, -8, 16)
 5:3/0 = 0
 5:3/0/z_index = 2
-5:3/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 4:3/0 = 0
 4:3/0/z_index = 2
-4:3/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 7:0/size_in_atlas = Vector2i(1, 3)
 7:0/0 = 0
 7:0/0/z_index = 2
-7:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -24, 8, -24, 8, 24, -8, 24)
 6:0/0 = 0
 6:0/0/z_index = 2
-6:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 8:0/0 = 0
 8:0/0/z_index = 2
-8:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 0:0/0 = 0
 1:0/0 = 0
 2:0/0 = 0
@@ -283,8 +262,7 @@ collision_enabled = false
 [node name="TileMapWall" type="TileMapLayer" parent="." unique_id=1480724956]
 z_index = 2
 tile_map_data = PackedByteArray("AAD5/wIAAQADAAEAAAD5/wAAAQADAAEAAAD5//7/AQADAAEAAAD5//z/AQADAAEAAAD6//v/AQAHAAAAAAD7//v/AQAHAAAAAAD8//v/AQAHAAAAAAD9//v/AQAHAAAAAAD+//v/AQAHAAAAAAD///v/AQAHAAAAAAAAAPv/AQAHAAAAAAABAPv/AQAHAAAAAAACAPv/AQAHAAAAAAADAPv/AQAHAAAAAAAEAPv/AQAHAAAAAAAFAPv/AQAHAAAAAAD5//v/AQADAAEAAAD5//r/AQAGAAAAAAAGAPz/AQAFAAEAAAAGAPv/AQAFAAEAAAAGAPr/AQAIAAAAAAAGAAIAAQAKAAoAAAAGAP7/AQAAAAIAAAD5/wUAAQADAAMAAAD6/wUAAQAEAAMAAAD7/wUAAQAEAAMAAAD8/wUAAQAEAAMAAAD9/wUAAQAEAAMAAAD+/wUAAQAEAAMAAAD//wUAAQAEAAMAAAAAAAUAAQAEAAMAAAABAAUAAQAEAAMAAAACAAUAAQAEAAMAAAADAAUAAQAEAAMAAAAEAAUAAQAEAAMAAAAFAAUAAQAEAAMAAAD5/wQAAQADAAEAAAAGAAMAAQAFAAEAAAAGAAQAAQAAAAEAAAAGAAUAAQAFAAMAAAA=")
-tile_set = SubResource("TileSet_ahowt")
-collision_enabled = true
+tile_set = ExtResource("3_omqt2")
 
 [node name="TileMapDeco" type="TileMapLayer" parent="." unique_id=170332915]
 z_index = 1

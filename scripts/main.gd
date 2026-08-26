@@ -1,7 +1,9 @@
 extends Node2D
 
 const DEFAULT_ROOM_SCENE := preload("res://rooms/graph_room.tscn")
-const DEFAULT_ENEMY_SCENE := preload("res://enemies/enemy.tscn")
+const DEFAULT_ENEMY_SCENE := preload("res://enemies/bone_scout_enemy.tscn")
+const TRAINING_DUMMY_2_SCENE := preload("res://enemies/training_dummy_2.tscn")
+const GOBLIN_BARREL_SCENE := preload("res://enemies/goblin_barrel.tscn")
 const SAVE_FILE_PATH := "user://savegame.cfg"
 
 enum RoomType {
@@ -308,6 +310,17 @@ func ensure_current_run_shape() -> void:
 	if current_run.is_empty():
 		return
 
+	if not current_run.has("stage"):
+		var saved_world: int = int(current_run.get("stage_world", 1))
+		var saved_floor: int = int(current_run.get("stage_floor", 1))
+		current_run["stage"] = ((saved_world - 1) * 3) + saved_floor
+
+	if not current_run.has("stage_world"):
+		current_run["stage_world"] = int((int(current_run.get("stage", 1)) - 1) / 3) + 1
+
+	if not current_run.has("stage_floor"):
+		current_run["stage_floor"] = int((int(current_run.get("stage", 1)) - 1) % 3) + 1
+
 	if not current_run.has("debuff_state"):
 		current_run["debuff_state"] = get_default_debuff_state()
 	else:
@@ -364,6 +377,8 @@ func build_run_snapshot() -> Dictionary:
 	return {
 		"has_saved_run": true,
 		"stage": current_stage,
+		"stage_world": get_stage_world_number(),
+		"stage_floor": get_stage_floor_number(),
 		"room": current_room_number,
 		"room_id": current_room_id,
 		"start_room_id": start_room_id,
@@ -678,6 +693,9 @@ func start_new_run() -> void:
 	current_stage_rooms = []
 	current_run = {
 		"has_saved_run": true,
+		"stage": 1,
+		"stage_world": 1,
+		"stage_floor": 1,
 		"gold": get_starting_gold(),
 		"weapon": "sword",
 		"debuff_state": get_default_debuff_state(),
@@ -707,7 +725,9 @@ func continue_saved_run() -> void:
 	player.move_speed = default_player_move_speed
 	clear_active_room()
 
-	current_stage = int(current_run.get("stage", 1))
+	var saved_world: int = int(current_run.get("stage_world", 1))
+	var saved_floor: int = int(current_run.get("stage_floor", 1))
+	current_stage = int(current_run.get("stage", ((saved_world - 1) * 3) + saved_floor))
 	current_room_number = int(current_run.get("room", 1))
 	current_room_id = int(current_run.get("room_id", -1))
 	start_room_id = int(current_run.get("start_room_id", -1))
@@ -1100,6 +1120,14 @@ func choose_outer_start_room_id(stage_rooms: Array[Dictionary]) -> int:
 		if int(stage_rooms[outer_room_id]["neighbors"].size()) <= 1:
 			outer_leaf_room_ids.append(outer_room_id)
 
+	var supported_outer_leaf_room_ids: Array[int] = []
+	for outer_leaf_room_id in outer_leaf_room_ids:
+		if has_premade_scene_for_room_data(stage_rooms[outer_leaf_room_id], RoomType.START):
+			supported_outer_leaf_room_ids.append(outer_leaf_room_id)
+
+	if not supported_outer_leaf_room_ids.is_empty():
+		return supported_outer_leaf_room_ids.pick_random()
+
 	if not outer_leaf_room_ids.is_empty():
 		return outer_leaf_room_ids.pick_random()
 
@@ -1282,14 +1310,44 @@ func instantiate_stage_graph() -> void:
 func get_room_scene_for_room(room_data: Dictionary) -> PackedScene:
 	var connection_folder_name: String = get_connection_folder_name(room_data["connections"])
 	var stage_folder_name: String = "stage_%s" % str(get_stage_world_number())
-	var room_type_folder: String = get_room_type_folder_name(room_data["room_type"] as RoomType)
-	var folder_path: String = "res://rooms/premade/%s/%s/%s" % [stage_folder_name, room_type_folder, connection_folder_name]
-	var scene_candidates: Array[PackedScene] = get_packed_scenes_in_folder(folder_path)
+	var scene_candidates: Array[PackedScene] = get_room_scene_candidates(
+		stage_folder_name,
+		room_data["room_type"] as RoomType,
+		connection_folder_name
+	)
 
 	if scene_candidates.is_empty():
 		return DEFAULT_ROOM_SCENE
 
 	return scene_candidates.pick_random()
+
+
+func has_premade_scene_for_room_data(room_data: Dictionary, room_type: RoomType) -> bool:
+	var connection_folder_name: String = get_connection_folder_name(room_data["connections"])
+	var stage_folder_name: String = "stage_%s" % str(get_stage_world_number())
+	return not get_room_scene_candidates(stage_folder_name, room_type, connection_folder_name).is_empty()
+
+
+func get_room_scene_candidates(stage_folder_name: String, room_type: RoomType, connection_folder_name: String) -> Array[PackedScene]:
+	var room_type_folder_names: Array[String] = get_room_type_folder_candidates(room_type)
+
+	for room_type_folder in room_type_folder_names:
+		var folder_path: String = "res://rooms/premade/%s/%s/%s" % [stage_folder_name, room_type_folder, connection_folder_name]
+		var scene_candidates: Array[PackedScene] = get_packed_scenes_in_folder(folder_path)
+		if not scene_candidates.is_empty():
+			return scene_candidates
+
+	return []
+
+
+func get_room_type_folder_candidates(room_type: RoomType) -> Array[String]:
+	var primary_folder_name: String = get_room_type_folder_name(room_type)
+
+	match room_type:
+		RoomType.BOSS, RoomType.REWARD, RoomType.REST:
+			return [primary_folder_name, "combat"]
+		_:
+			return [primary_folder_name]
 
 
 func get_connection_folder_name(connection_directions: Array) -> String:
@@ -1542,8 +1600,9 @@ func spawn_room_enemies(room_id: int) -> void:
 		mark_room_completed(room_id)
 		return
 
+	var room_enemy_scene: PackedScene = get_enemy_scene_for_room(room_data)
 	for enemy_index in enemy_count:
-		var enemy = enemy_scene.instantiate()
+		var enemy = room_enemy_scene.instantiate()
 		enemy_container.add_child(enemy)
 		enemy.global_position = enemy_spawn_positions[enemy_index]
 		enemy.set_meta("room_id", room_id)
@@ -1574,6 +1633,28 @@ func get_enemy_count_for_room(room_id: int, max_spawn_count: int) -> int:
 
 	var scaled_enemy_count: int = current_stage + combat_index - 1
 	return clampi(scaled_enemy_count, 1, max_spawn_count)
+
+
+func get_enemy_scene_for_room(room_data: Dictionary) -> PackedScene:
+	var room_type: RoomType = room_data["room_type"] as RoomType
+	if room_type != RoomType.COMBAT:
+		return enemy_scene
+
+	var stage_world: int = get_stage_world_number()
+	var stage_floor: int = get_stage_floor_number()
+	var highest_stage_completed: int = int(meta_progression.get("highest_stage_completed", 0))
+	var has_cleared_stage_1_1_before: bool = highest_stage_completed >= 1
+
+	if stage_world == 1 and stage_floor == 1 and not has_cleared_stage_1_1_before:
+		return TRAINING_DUMMY_2_SCENE
+
+	if stage_world == 1 and stage_floor >= 2 and stage_floor <= 3:
+		return GOBLIN_BARREL_SCENE
+
+	if stage_world == 1 and stage_floor == 1 and has_cleared_stage_1_1_before:
+		return GOBLIN_BARREL_SCENE
+
+	return enemy_scene
 
 
 func get_room_node(room_id: int) -> StageRoom:

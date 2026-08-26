@@ -17,148 +17,148 @@ size = Vector2(196, 132)
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_interact"]
 size = Vector2(24, 24)
 
-[node name="GraphRoom" type="Node2D"]
+[node name="GraphRoom" type="Node2D" unique_id=1407028293]
 script = ExtResource("1_stage")
 
-[node name="Floor" type="Polygon2D" parent="."]
-polygon = PackedVector2Array(-112, -80, 112, -80, 112, 80, -112, 80)
+[node name="Floor" type="Polygon2D" parent="." unique_id=1829690009]
 color = Color(0.32, 0.18, 0.18, 1)
+polygon = PackedVector2Array(-112, -80, 112, -80, 112, 80, -112, 80)
 
-[node name="Walls" type="Node2D" parent="."]
+[node name="Walls" type="Node2D" parent="." unique_id=665096756]
 
-[node name="TopLeftWall" type="StaticBody2D" parent="Walls"]
+[node name="TopLeftWall" type="StaticBody2D" parent="Walls" unique_id=1730708434]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/TopLeftWall"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/TopLeftWall" unique_id=1468212946]
 position = Vector2(-66, -80)
 shape = SubResource("RectangleShape2D_wall_h")
 
-[node name="TopRightWall" type="StaticBody2D" parent="Walls"]
+[node name="TopRightWall" type="StaticBody2D" parent="Walls" unique_id=1608738359]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/TopRightWall"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/TopRightWall" unique_id=1335683147]
 position = Vector2(66, -80)
 shape = SubResource("RectangleShape2D_wall_h")
 
-[node name="BottomLeftWall" type="StaticBody2D" parent="Walls"]
+[node name="BottomLeftWall" type="StaticBody2D" parent="Walls" unique_id=1965876616]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/BottomLeftWall"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/BottomLeftWall" unique_id=1103035960]
 position = Vector2(-66, 80)
 shape = SubResource("RectangleShape2D_wall_h")
 
-[node name="BottomRightWall" type="StaticBody2D" parent="Walls"]
+[node name="BottomRightWall" type="StaticBody2D" parent="Walls" unique_id=2095905200]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/BottomRightWall"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/BottomRightWall" unique_id=289793108]
 position = Vector2(66, 80)
 shape = SubResource("RectangleShape2D_wall_h")
 
-[node name="LeftTopWall" type="StaticBody2D" parent="Walls"]
+[node name="LeftTopWall" type="StaticBody2D" parent="Walls" unique_id=1258486613]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/LeftTopWall"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/LeftTopWall" unique_id=95237325]
 position = Vector2(-112, -44)
 shape = SubResource("RectangleShape2D_wall_v")
 
-[node name="LeftBottomWall" type="StaticBody2D" parent="Walls"]
+[node name="LeftBottomWall" type="StaticBody2D" parent="Walls" unique_id=1387011262]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/LeftBottomWall"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/LeftBottomWall" unique_id=1779460141]
 position = Vector2(-112, 44)
 shape = SubResource("RectangleShape2D_wall_v")
 
-[node name="RightTopWall" type="StaticBody2D" parent="Walls"]
+[node name="RightTopWall" type="StaticBody2D" parent="Walls" unique_id=30551095]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/RightTopWall"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/RightTopWall" unique_id=104667512]
 position = Vector2(112, -44)
 shape = SubResource("RectangleShape2D_wall_v")
 
-[node name="RightBottomWall" type="StaticBody2D" parent="Walls"]
+[node name="RightBottomWall" type="StaticBody2D" parent="Walls" unique_id=681718023]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/RightBottomWall"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/RightBottomWall" unique_id=1895169833]
 position = Vector2(112, 44)
 shape = SubResource("RectangleShape2D_wall_v")
 
-[node name="ConnectionIndicators" type="Node2D" parent="."]
+[node name="ConnectionIndicators" type="Node2D" parent="." unique_id=618133970]
 
-[node name="NorthConnection" type="Polygon2D" parent="ConnectionIndicators"]
+[node name="NorthConnection" type="Polygon2D" parent="ConnectionIndicators" unique_id=814439022]
 visible = false
 position = Vector2(0, -80)
-polygon = PackedVector2Array(-18, -6, 18, -6, 18, 6, -18, 6)
 color = Color(0.82, 0.82, 0.82, 1)
+polygon = PackedVector2Array(-18, -6, 18, -6, 18, 6, -18, 6)
 
-[node name="SouthConnection" type="Polygon2D" parent="ConnectionIndicators"]
+[node name="SouthConnection" type="Polygon2D" parent="ConnectionIndicators" unique_id=1139210027]
 visible = false
 position = Vector2(0, 80)
-polygon = PackedVector2Array(-18, -6, 18, -6, 18, 6, -18, 6)
 color = Color(0.82, 0.82, 0.82, 1)
+polygon = PackedVector2Array(-18, -6, 18, -6, 18, 6, -18, 6)
 
-[node name="WestConnection" type="Polygon2D" parent="ConnectionIndicators"]
+[node name="WestConnection" type="Polygon2D" parent="ConnectionIndicators" unique_id=527604012]
 visible = false
 position = Vector2(-112, 0)
-polygon = PackedVector2Array(-6, -18, 6, -18, 6, 18, -6, 18)
 color = Color(0.82, 0.82, 0.82, 1)
+polygon = PackedVector2Array(-6, -18, 6, -18, 6, 18, -6, 18)
 
-[node name="EastConnection" type="Polygon2D" parent="ConnectionIndicators"]
+[node name="EastConnection" type="Polygon2D" parent="ConnectionIndicators" unique_id=77079471]
 visible = false
 position = Vector2(112, 0)
-polygon = PackedVector2Array(-6, -18, 6, -18, 6, 18, -6, 18)
 color = Color(0.82, 0.82, 0.82, 1)
+polygon = PackedVector2Array(-6, -18, 6, -18, 6, 18, -6, 18)
 
-[node name="Markers" type="Node2D" parent="."]
+[node name="Markers" type="Node2D" parent="." unique_id=1453254399]
 
-[node name="PlayerSpawn" type="Marker2D" parent="Markers"]
+[node name="PlayerSpawn" type="Marker2D" parent="Markers" unique_id=1328594031]
 
-[node name="NorthDoor" type="Marker2D" parent="Markers"]
+[node name="NorthDoor" type="Marker2D" parent="Markers" unique_id=1938991704]
 position = Vector2(0, -80)
 
-[node name="SouthDoor" type="Marker2D" parent="Markers"]
+[node name="SouthDoor" type="Marker2D" parent="Markers" unique_id=1235857815]
 position = Vector2(0, 80)
 
-[node name="WestDoor" type="Marker2D" parent="Markers"]
+[node name="WestDoor" type="Marker2D" parent="Markers" unique_id=1962239841]
 position = Vector2(-112, 0)
 
-[node name="EastDoor" type="Marker2D" parent="Markers"]
+[node name="EastDoor" type="Marker2D" parent="Markers" unique_id=778504807]
 position = Vector2(112, 0)
 
-[node name="EnemySpawns" type="Node2D" parent="Markers"]
+[node name="EnemySpawns" type="Node2D" parent="Markers" unique_id=1047451056]
 
-[node name="Spawn1" type="Marker2D" parent="Markers/EnemySpawns"]
+[node name="Spawn1" type="Marker2D" parent="Markers/EnemySpawns" unique_id=1192502966]
 position = Vector2(-40, -16)
 
-[node name="Spawn2" type="Marker2D" parent="Markers/EnemySpawns"]
+[node name="Spawn2" type="Marker2D" parent="Markers/EnemySpawns" unique_id=994678590]
 position = Vector2(40, -16)
 
-[node name="Spawn3" type="Marker2D" parent="Markers/EnemySpawns"]
+[node name="Spawn3" type="Marker2D" parent="Markers/EnemySpawns" unique_id=736125777]
 position = Vector2(-28, 28)
 
-[node name="Spawn4" type="Marker2D" parent="Markers/EnemySpawns"]
+[node name="Spawn4" type="Marker2D" parent="Markers/EnemySpawns" unique_id=892975009]
 position = Vector2(28, 28)
 
-[node name="ActivationZone" type="Area2D" parent="."]
+[node name="ActivationZone" type="Area2D" parent="." unique_id=1935979813]
 collision_mask = 2
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="ActivationZone"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ActivationZone" unique_id=1421239733]
 shape = SubResource("RectangleShape2D_activation_zone")
 
-[node name="RoomBounds" type="Area2D" parent="."]
+[node name="RoomBounds" type="Area2D" parent="." unique_id=730065226]
 collision_mask = 2
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="RoomBounds"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RoomBounds" unique_id=1838930806]
 shape = SubResource("RectangleShape2D_room_bounds")
 
-[node name="RewardInteractable" type="Area2D" parent="."]
+[node name="RewardInteractable" type="Area2D" parent="." unique_id=1226693196]
+collision_mask = 2
 monitoring = false
 monitorable = false
-collision_mask = 2
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="RewardInteractable"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RewardInteractable" unique_id=551979531]
 position = Vector2(48, 0)
 shape = SubResource("RectangleShape2D_interact")
 disabled = true
 
-[node name="RewardDisplay" type="Polygon2D" parent="RewardInteractable"]
-position = Vector2(48, 0)
+[node name="RewardDisplay" type="Polygon2D" parent="RewardInteractable" unique_id=1570136616]
 visible = false
-polygon = PackedVector2Array(-12, -12, 12, -12, 12, 12, -12, 12)
+position = Vector2(48, 0)
 color = Color(0.91, 0.73, 0.22, 1)
+polygon = PackedVector2Array(-12, -12, 12, -12, 12, 12, -12, 12)
 
-[node name="PromptLabel" type="Label" parent="RewardInteractable"]
+[node name="PromptLabel" type="Label" parent="RewardInteractable" unique_id=1897440222]
 visible = false
 offset_left = 11.0
 offset_top = 18.0
@@ -168,23 +168,23 @@ text = "Press E
 Reward"
 horizontal_alignment = 1
 
-[node name="StageExitInteractable" type="Area2D" parent="."]
+[node name="StageExitInteractable" type="Area2D" parent="." unique_id=311762399]
+collision_mask = 2
 monitoring = false
 monitorable = false
-collision_mask = 2
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="StageExitInteractable"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StageExitInteractable" unique_id=425272885]
 position = Vector2(0, -28)
 shape = SubResource("RectangleShape2D_interact")
 disabled = true
 
-[node name="ExitDisplay" type="Polygon2D" parent="StageExitInteractable"]
-position = Vector2(0, -28)
+[node name="ExitDisplay" type="Polygon2D" parent="StageExitInteractable" unique_id=504987128]
 visible = false
-polygon = PackedVector2Array(-12, -12, 12, -12, 12, 12, -12, 12)
+position = Vector2(0, -28)
 color = Color(0.37, 0.71, 0.98, 1)
+polygon = PackedVector2Array(-12, -12, 12, -12, 12, 12, -12, 12)
 
-[node name="PromptLabel" type="Label" parent="StageExitInteractable"]
+[node name="PromptLabel" type="Label" parent="StageExitInteractable" unique_id=1447269874]
 visible = false
 offset_left = -41.0
 offset_top = -6.0
@@ -194,7 +194,7 @@ text = "Press E
 Enter Portal"
 horizontal_alignment = 1
 
-[node name="RoomLabel" type="Label" parent="."]
+[node name="RoomLabel" type="Label" parent="." unique_id=2066608389]
 offset_left = -56.0
 offset_top = -110.0
 offset_right = 56.0
