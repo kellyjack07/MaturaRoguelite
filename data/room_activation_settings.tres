@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="RoomActivationSettings" format=3 uid="uid://dlkpbek20svw2"]
+
+[ext_resource type="Script" uid="uid://dqx3vt5jaf8b8" path="res://scripts/room_activation_settings.gd" id="1_room_activation_settings"]
+
+[resource]
+script = ExtResource("1_room_activation_settings")
+activation_zone_size = Vector2(100, 56)

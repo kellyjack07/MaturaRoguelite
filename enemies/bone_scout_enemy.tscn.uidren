@@ -1,0 +1,22 @@
+[gd_scene format=3 uid="uid://ca8nq7xw5otam"]
+
+[ext_resource type="PackedScene" path="res://enemies/enemy.tscn" id="1_base"]
+[ext_resource type="Script" path="res://scripts/bone_scout_enemy.gd" id="2_script"]
+
+[node name="Enemy" instance=ExtResource("1_base")]
+script = ExtResource("2_script")
+move_speed = 34.0
+stop_distance = 18.0
+hit_knockback_speed = 145.0
+
+[node name="AnimatedSprite2D" parent="." index="0"]
+modulate = Color(0.93, 0.93, 1, 1)
+
+[node name="Health" parent="." index="2"]
+max_health = 28
+
+[node name="Hurtbox" parent="." index="3"]
+invulnerability_duration = 0.22
+
+[node name="Hitbox" parent="." index="4"]
+damage = 2
