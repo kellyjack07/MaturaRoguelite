@@ -1,5 +1,6 @@
 extends Node2D
 
+const WeaponRegistryScript := preload("res://scripts/weapons/weapon_registry.gd")
 const DEFAULT_ROOM_SCENE := preload("res://rooms/graph_room.tscn")
 const DEFAULT_ENEMY_SCENE := preload("res://enemies/bone_scout_enemy.tscn")
 const TRAINING_DUMMY_2_SCENE := preload("res://enemies/training_dummy_2.tscn")
@@ -37,6 +38,7 @@ enum RoomEventType {
 @export var combat_clear_gold_reward: int = 1
 @export var stage_grid_room_count: int = 7
 @export var room_world_spacing: Vector2 = Vector2(320.0, 224.0)
+@export var enable_dev_weapon_screen_in_release: bool = false
 
 @onready var player: CharacterBody2D = $Player
 @onready var room_container: Node2D = $RoomContainer
@@ -82,6 +84,7 @@ enum RoomEventType {
 @onready var starter_gold_button: Button = $UI/GearStoreScreen/StarterGoldButton
 @onready var rest_bonus_button: Button = $UI/GearStoreScreen/RestBonusButton
 @onready var luck_button: Button = $UI/GearStoreScreen/LuckButton
+@onready var dev_weapon_screen: Control = $UI/DevWeaponScreen
 
 var hit_stop_active: bool = false
 var hit_stop_duration: float = 0.01
@@ -105,6 +108,8 @@ var current_run: Dictionary = {}
 var current_room_event_type: RoomEventType = RoomEventType.NONE
 var stage_room_nodes: Dictionary = {}
 var hallway_container: Node2D = null
+var dev_tools_enabled: bool = false
+var dev_menu_previous_pause_state: bool = false
 
 
 #start
@@ -120,6 +125,12 @@ func _ready() -> void:
 	gear_store_screen.visible = false
 	settings_screen.visible = false
 	pause_menu_screen.visible = false
+	dev_tools_enabled = OS.is_debug_build() or enable_dev_weapon_screen_in_release
+	ensure_developer_input_action()
+	dev_weapon_screen.setup(self)
+	dev_weapon_screen.close_requested.connect(close_developer_weapon_screen)
+	dev_weapon_screen.visible = false
+	player.death_started.connect(_on_player_death_started)
 
 	load_progress()
 	connect_ui_signals()
@@ -167,7 +178,19 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not event.pressed or event.echo:
 		return
+	if event.is_action_pressed("dev_weapon_menu") or event.keycode == KEY_F6:
+		if dev_weapon_screen.visible:
+			close_developer_weapon_screen()
+		else:
+			open_developer_weapon_screen()
+		get_viewport().set_input_as_handled()
+		return
 	if event.keycode != KEY_ESCAPE:
+		return
+
+	if dev_weapon_screen.visible:
+		close_developer_weapon_screen()
+		get_viewport().set_input_as_handled()
 		return
 
 	if settings_screen.visible:
@@ -233,6 +256,15 @@ func _notification(what: int) -> void:
 		save_progress()
 
 
+func ensure_developer_input_action() -> void:
+	if not InputMap.has_action("dev_weapon_menu"):
+		InputMap.add_action("dev_weapon_menu")
+	if InputMap.action_get_events("dev_weapon_menu").is_empty():
+		var shortcut := InputEventKey.new()
+		shortcut.keycode = KEY_F6
+		InputMap.action_add_event("dev_weapon_menu", shortcut)
+
+
 #save/load
 func get_default_meta_progression() -> Dictionary:
 	return {
@@ -241,7 +273,7 @@ func get_default_meta_progression() -> Dictionary:
 		"weapon_unlocks": {
 			"sword": true,
 			"spear": false,
-			"heavy": false,
+			"hammer": false,
 		},
 		"weapon_trees": {
 			"sword": {
@@ -252,7 +284,7 @@ func get_default_meta_progression() -> Dictionary:
 				"base_damage": 0,
 				"special_damage": 0,
 			},
-			"heavy": {
+			"hammer": {
 				"base_damage": 0,
 				"special_damage": 0,
 			},
@@ -279,6 +311,10 @@ func get_default_debuff_state() -> Dictionary:
 
 func ensure_meta_progression_shape() -> void:
 	var defaults: Dictionary = get_default_meta_progression()
+	if meta_progression.has("weapon_unlocks") and meta_progression["weapon_unlocks"].has("heavy") and not meta_progression["weapon_unlocks"].has("hammer"):
+		meta_progression["weapon_unlocks"]["hammer"] = meta_progression["weapon_unlocks"]["heavy"]
+	if meta_progression.has("weapon_trees") and meta_progression["weapon_trees"].has("heavy") and not meta_progression["weapon_trees"].has("hammer"):
+		meta_progression["weapon_trees"]["hammer"] = meta_progression["weapon_trees"]["heavy"].duplicate(true)
 
 	for key in defaults.keys():
 		if not meta_progression.has(key):
@@ -320,6 +356,10 @@ func ensure_current_run_shape() -> void:
 
 	if not current_run.has("stage_floor"):
 		current_run["stage_floor"] = int((int(current_run.get("stage", 1)) - 1) % 3) + 1
+
+	current_run["weapon"] = WeaponRegistryScript.normalize_weapon_id(str(current_run.get("weapon", "sword")))
+	if not current_run.has("weapon_cooldowns"):
+		current_run["weapon_cooldowns"] = {}
 
 	if not current_run.has("debuff_state"):
 		current_run["debuff_state"] = get_default_debuff_state()
@@ -386,6 +426,7 @@ func build_run_snapshot() -> Dictionary:
 		"stage_rooms": current_stage_rooms,
 		"gold": current_run.get("gold", 0),
 		"weapon": current_run.get("weapon", "sword"),
+		"weapon_cooldowns": player.get_cooldown_snapshot(),
 		"player_health": health_component.current_health,
 		"debuff_state": current_run.get("debuff_state", get_default_debuff_state()),
 	}
@@ -415,6 +456,9 @@ func apply_master_volume(volume_value: float) -> void:
 
 #menu ui
 func show_main_menu() -> void:
+	player.cancel_actions_for_modal()
+	player.visible = false
+	player.set_physics_process(false)
 	main_menu_screen.visible = true
 	gear_store_screen.visible = false
 	settings_screen.visible = false
@@ -422,6 +466,7 @@ func show_main_menu() -> void:
 	death_screen.visible = false
 	stage_transition_screen.visible = false
 	room_event_screen.visible = false
+	dev_weapon_screen.visible = false
 	get_tree().paused = false
 	continue_run_button.visible = has_saved_run()
 	continue_run_button.disabled = not has_saved_run()
@@ -481,6 +526,64 @@ func open_pause_menu() -> void:
 	pause_menu_screen.visible = true
 	update_pause_menu_info()
 	get_tree().paused = true
+
+
+func can_open_developer_weapon_screen() -> bool:
+	return (
+		dev_tools_enabled
+		and run_active
+		and not get_tree().paused
+		and not death_screen.visible
+		and not stage_transition_active
+		and not room_event_screen.visible
+		and not settings_screen.visible
+		and not gear_store_screen.visible
+		and not main_menu_screen.visible
+		and not pause_menu_screen.visible
+	)
+
+
+func open_developer_weapon_screen() -> void:
+	if not can_open_developer_weapon_screen():
+		return
+	dev_menu_previous_pause_state = get_tree().paused
+	player.cancel_actions_for_modal()
+	get_tree().paused = true
+	dev_weapon_screen.open_screen()
+
+
+func close_developer_weapon_screen() -> void:
+	if not dev_weapon_screen.visible:
+		return
+	dev_weapon_screen.hide()
+	get_tree().paused = dev_menu_previous_pause_state
+	if run_active and not get_tree().paused:
+		player.set_physics_process(true)
+
+
+func get_weapon_ids() -> Array:
+	return WeaponRegistryScript.get_weapon_ids()
+
+
+func get_weapon_definition(weapon_id: String) -> Resource:
+	return WeaponRegistryScript.get_definition(weapon_id)
+
+
+func get_selected_weapon_id() -> String:
+	return WeaponRegistryScript.normalize_weapon_id(str(current_run.get("weapon", "sword")))
+
+
+func is_weapon_unlocked(weapon_id: String) -> bool:
+	return bool(meta_progression.get("weapon_unlocks", {}).get(weapon_id, false))
+
+
+func equip_developer_weapon(weapon_id: String) -> void:
+	if not dev_weapon_screen.visible or not run_active:
+		return
+	current_run["weapon"] = WeaponRegistryScript.normalize_weapon_id(weapon_id)
+	apply_run_modifiers()
+	save_progress()
+	update_debug_ui()
 
 
 func resume_run() -> void:
@@ -673,6 +776,7 @@ func _on_volume_slider_value_changed(new_value: float) -> void:
 #run setup
 func start_new_run() -> void:
 	get_tree().paused = false
+	enemy_container.process_mode = Node.PROCESS_MODE_INHERIT
 	run_active = true
 	stage_transition_active = false
 	main_menu_screen.visible = false
@@ -682,9 +786,10 @@ func start_new_run() -> void:
 	death_screen.visible = false
 	stage_transition_screen.visible = false
 	room_event_screen.visible = false
+	dev_weapon_screen.visible = false
+	player.reset_for_run(true)
 	player.visible = true
 	player.set_physics_process(true)
-	player.base_attack_damage = default_player_base_attack_damage
 	player.move_speed = default_player_move_speed
 	health_component.reset_health()
 	clear_active_room()
@@ -698,6 +803,7 @@ func start_new_run() -> void:
 		"stage_floor": 1,
 		"gold": get_starting_gold(),
 		"weapon": "sword",
+		"weapon_cooldowns": {},
 		"debuff_state": get_default_debuff_state(),
 	}
 	apply_run_modifiers()
@@ -711,6 +817,7 @@ func continue_saved_run() -> void:
 		return
 
 	get_tree().paused = false
+	enemy_container.process_mode = Node.PROCESS_MODE_INHERIT
 	run_active = true
 	stage_transition_active = false
 	main_menu_screen.visible = false
@@ -719,9 +826,10 @@ func continue_saved_run() -> void:
 	pause_menu_screen.visible = false
 	death_screen.visible = false
 	stage_transition_screen.visible = false
+	dev_weapon_screen.visible = false
+	player.reset_for_run(true)
 	player.visible = true
 	player.set_physics_process(true)
-	player.base_attack_damage = default_player_base_attack_damage
 	player.move_speed = default_player_move_speed
 	clear_active_room()
 
@@ -734,6 +842,7 @@ func continue_saved_run() -> void:
 	boss_room_id = int(current_run.get("boss_room_id", current_run.get("exit_room_id", -1)))
 	current_stage_rooms = current_run.get("stage_rooms", [])
 	ensure_current_run_shape()
+	player.set_cooldown_snapshot(current_run.get("weapon_cooldowns", {}))
 	if current_stage_rooms.is_empty():
 		current_stage_rooms = build_stage_graph()
 		current_room_number = 0
@@ -757,13 +866,19 @@ func get_starting_gold() -> int:
 
 
 func apply_run_modifiers() -> void:
-	var weapon_name: String = current_run.get("weapon", "sword")
-	var weapon_damage_bonus: int = meta_progression["weapon_trees"][weapon_name]["base_damage"]
+	var weapon_name: String = WeaponRegistryScript.normalize_weapon_id(str(current_run.get("weapon", "sword")))
+	current_run["weapon"] = player.equip_weapon(weapon_name)
+	var weapon_definition: Resource = WeaponRegistryScript.get_definition(weapon_name)
+	var weapon_tree: Dictionary = meta_progression.get("weapon_trees", {}).get(weapon_name, {})
+	var basic_damage_bonus: int = int(weapon_tree.get("base_damage", 0))
+	var special_damage_bonus: int = int(weapon_tree.get("special_damage", 0))
 	var debuff_state: Dictionary = current_run.get("debuff_state", get_default_debuff_state())
 	var attack_penalty: int = int(debuff_state.get("attack_penalty", 0))
 	var speed_penalty: float = float(debuff_state.get("speed_penalty", 0.0))
 
-	player.base_attack_damage = max(default_player_base_attack_damage + weapon_damage_bonus - attack_penalty, 1)
+	var effective_basic: int = maxi(int(weapon_definition.basic_attack.base_damage) + basic_damage_bonus - attack_penalty, 1)
+	var effective_special: int = maxi(int(weapon_definition.special_attack.base_damage) + special_damage_bonus - attack_penalty, 1)
+	player.set_effective_attack_damage(effective_basic, effective_special)
 	player.move_speed = max(default_player_move_speed - speed_penalty, 60.0)
 
 
@@ -799,10 +914,12 @@ func set_run_ui_visible(is_visible: bool) -> void:
 func update_debug_ui() -> void:
 	health_label.text = "HP: " + str(health_component.current_health) + "/" + str(health_component.max_health)
 	gold_label.text = "Gold: " + str(current_run.get("gold", 0))
-	weapon_label.text = "Weapon: " + str(current_run.get("weapon", "sword"))
+	var weapon_definition: Resource = WeaponRegistryScript.get_definition(get_selected_weapon_id())
+	var special_status := "Ready" if player.get_special_cooldown_left() <= 0.0 else "%.1fs" % player.get_special_cooldown_left()
+	weapon_label.text = "Weapon: %s | Special: %s" % [weapon_definition.display_name, special_status]
 	state_label.text = "State: " + get_player_state_text()
 	multiplier_label.text = "Multiplier: " + str(player.get_damage_multiplier())
-	damage_label.text = "Last Damage: " + str(player.last_damage_dealt)
+	damage_label.text = "Last Damage: %s (x%s sampled)" % [player.last_damage_dealt, player.sampled_movement_multiplier]
 	stage_label.text = "Stage: " + get_stage_display_text()
 	room_label.text = "Room: " + str(current_room_number) + "/" + str(current_stage_rooms.size())
 	room_type_label.text = "Room Type: " + get_current_room_type_text()
@@ -813,6 +930,15 @@ func update_debug_ui() -> void:
 
 
 func get_player_state_text() -> String:
+	match player.action_state:
+		player.ActionState.BASIC_ATTACK:
+			return "basic attack"
+		player.ActionState.SPECIAL_ATTACK:
+			return "special attack"
+		player.ActionState.HURT:
+			return "hurt"
+		player.ActionState.DEAD:
+			return "dead"
 	match player.movement_state:
 		player.MovementState.DASHING:
 			return "dashing"
@@ -1863,6 +1989,7 @@ func start_stage_transition() -> void:
 		get_stage_display_text(current_stage + 1),
 	]
 	stage_transition_screen.visible = true
+	player.cancel_actions_for_modal()
 	player.set_physics_process(false)
 	call_deferred("finish_stage_transition")
 
@@ -2016,6 +2143,7 @@ func show_room_event(
 
 	room_event_screen.visible = true
 	if run_active:
+		player.cancel_actions_for_modal()
 		player.set_physics_process(false)
 
 	room_event_primary_button.grab_focus()
@@ -2174,6 +2302,11 @@ func _on_stage_exit_requested(room: StageRoom) -> void:
 
 
 #player death
+func _on_player_death_started() -> void:
+	close_developer_weapon_screen()
+	enemy_container.process_mode = Node.PROCESS_MODE_DISABLED
+
+
 func _on_player_died() -> void:
 	run_active = false
 	clear_saved_run_snapshot()

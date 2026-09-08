@@ -1,0 +1,51 @@
+[gd_resource type="Resource" script_class="WeaponDefinition" format=3 uid="uid://cc81rwdcp0bi0"]
+
+[ext_resource type="Script" uid="uid://bnm6gfrykyb7m" path="res://scripts/weapons/weapon_definition.gd" id="1_weapon"]
+[ext_resource type="Script" uid="uid://bj4ss2q6eaun4" path="res://scripts/weapons/attack_definition.gd" id="2_attack"]
+
+[sub_resource type="Resource" id="AttackDefinition_basic"]
+script = ExtResource("2_attack")
+base_damage = 7
+startup = 0.2
+recovery = 0.1
+shape_size = Vector2(42, 30)
+reach = 22.0
+max_targets = 3
+pulse_times = PackedFloat32Array(0.2)
+
+[sub_resource type="Resource" id="AttackDefinition_special"]
+script = ExtResource("2_attack")
+base_damage = 12
+startup = 0.3
+active_duration = 0.2
+recovery = 0.3
+cooldown = 3.0
+shape_kind = 2
+shape_radius = 42.0
+reach = 0.0
+max_targets = 8
+pulse_times = PackedFloat32Array(0.35)
+
+[resource]
+script = ExtResource("1_weapon")
+weapon_id = "hammer"
+display_name = "Hammer"
+animations = {
+"basic_down": &"attack_down_hammer",
+"basic_side": &"attack_side_hammer",
+"basic_up": &"attack_up_hammer",
+"dash_down": &"dash_down",
+"dash_side": &"dash_side",
+"dash_up": &"dash_up",
+"death": &"death",
+"hurt": &"hurt",
+"idle_down": &"idle_down_hammer",
+"idle_side": &"idle_side",
+"idle_up": &"idle_up",
+"special": &"special_hammer",
+"walk_down": &"walk_down",
+"walk_side": &"walk_side",
+"walk_up": &"walk_up"
+}
+basic_attack = SubResource("AttackDefinition_basic")
+special_attack = SubResource("AttackDefinition_special")

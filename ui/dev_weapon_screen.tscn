@@ -1,0 +1,79 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/dev_weapon_screen.gd" id="1_script"]
+
+[node name="DevWeaponScreen" type="Control"]
+process_mode = 3
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0.035, 0.045, 0.07, 0.92)
+
+[node name="Panel" type="PanelContainer" parent="Background"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -175.0
+offset_right = 220.0
+offset_bottom = 175.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="Background/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 16
+
+[node name="Content" type="VBoxContainer" parent="Background/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TitleLabel" type="Label" parent="Background/Panel/Margin/Content"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Developer Weapon Test"
+horizontal_alignment = 1
+
+[node name="CurrentLabel" type="Label" parent="Background/Panel/Margin/Content"]
+layout_mode = 2
+text = "Current: Sword"
+horizontal_alignment = 1
+
+[node name="WeaponButtons" type="VBoxContainer" parent="Background/Panel/Margin/Content"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 5
+
+[node name="StatsLabel" type="Label" parent="Background/Panel/Margin/Content"]
+layout_mode = 2
+text = "Basic damage: 5\nSpecial damage: 8\nSpecial cooldown: 1.5s"
+
+[node name="ControlsLabel" type="Label" parent="Background/Panel/Margin/Content"]
+layout_mode = 2
+text = "Move WASD/arrows | Basic Space | Special Q | Dash Shift\nF6/Escape closes. Selection is saved for this run only."
+autowrap_mode = 2
+
+[node name="CloseButton" type="Button" parent="Background/Panel/Margin/Content"]
+layout_mode = 2
+focus_mode = 2
+text = "Close / Resume"

@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bvvy3nm23icgx" path="res://scripts/main.gd" id="1_jyhfs"]
 [ext_resource type="PackedScene" uid="uid://cfgw2usaccukm" path="res://scenes/player.tscn" id="1_o5qli"]
+[ext_resource type="PackedScene" path="res://ui/dev_weapon_screen.tscn" id="3_dev_weapons"]
 
 [node name="Main" type="Node2D" unique_id=686745571]
 script = ExtResource("1_jyhfs")
@@ -67,7 +68,6 @@ offset_bottom = 205.0
 text = "Continue Run"
 
 [node name="GearStoreButton" type="Button" parent="UI/MainMenuScreen" unique_id=1600000006]
-visible = false
 layout_mode = 0
 offset_left = 260.0
 offset_top = 214.0
@@ -544,6 +544,8 @@ offset_top = 4.0
 offset_right = 542.0
 offset_bottom = 27.0
 horizontal_alignment = 1
+
+[node name="DevWeaponScreen" parent="UI" instance=ExtResource("3_dev_weapons")]
 
 [connection signal="died" from="Player" to="." method="_on_player_died"]
 [connection signal="pressed" from="UI/DeathScreen/RestartButton" to="." method="_on_restart_button_pressed"]
