@@ -104,6 +104,7 @@ func test_animation_contract(player: Node) -> void:
 
 
 func test_registry_and_cooldowns(player: Node) -> void:
+	player.set_developer_combat_bypass(true)
 	check(player.equip_weapon("not-a-weapon") == "sword", "Invalid weapon ID did not fall back to sword")
 	check(player.equip_weapon("heavy") == "hammer", "Legacy heavy weapon ID did not migrate to hammer")
 	player.equip_weapon("sword")
@@ -114,6 +115,7 @@ func test_registry_and_cooldowns(player: Node) -> void:
 	player.equip_weapon("sword")
 	check(is_equal_approx(player.get_special_cooldown_left(), sword_cooldown), "A-B-A switching reset sword cooldown")
 	player.cancel_transient_actions()
+	player.set_developer_combat_bypass(false)
 
 
 func make_target(target_position: Vector2, max_health: int = 100, invulnerability_duration: float = 0.01) -> Node2D:
@@ -173,11 +175,13 @@ func test_combat_queries(player: Node) -> void:
 	await physics_frame
 	player.equip_weapon("spear")
 	player.set_effective_attack_damage(4, 7)
+	player.set_developer_combat_bypass(true)
 	player.start_special_attack()
 	await physics_frame
 	player.update_action(0.55)
 	check(spear_target.get_node("Health").current_health == 93, "Spear special ignored target invulnerability between pulses")
 	player.cancel_transient_actions()
+	player.set_developer_combat_bypass(false)
 	await create_timer(0.55).timeout
 	spear_target.queue_free()
 	await process_frame
@@ -213,23 +217,38 @@ func test_main_run_integration() -> void:
 	var main = MainScene.instantiate()
 	root.add_child(main)
 	await process_frame
+	main.reset_all_save_data()
 	main.start_new_run()
 	await process_frame
 
-	main.meta_progression["weapon_trees"]["sword"]["base_damage"] = 2
-	main.meta_progression["weapon_trees"]["sword"]["special_damage"] = 3
+	main.meta_progression["purchased_skill_nodes"] = ["root", "sword", "sword_01", "sword_02", "spear"]
 	main.current_run["debuff_state"]["attack_penalty"] = 1
 	main.current_run["weapon"] = "sword"
 	main.apply_run_modifiers()
-	check(main.player.effective_basic_damage == 6, "Sword basic modifiers were not applied exactly once")
-	check(main.player.effective_special_damage == 10, "Sword special modifiers were not applied")
+	check(is_equal_approx(main.player.effective_basic_damage, 5.16), "Sword basic did not apply weapon, character, and debuff rules exactly once")
+	check(is_equal_approx(main.player.effective_special_damage, 7.8), "Sword special did not apply character damage and debuff exactly once")
+	check(not main.player.can_use_special(), "Sword special was usable without node 07")
+	main.meta_progression["purchased_skill_nodes"].append_array(["sword_03", "sword_04", "sword_05", "sword_06", "sword_07"])
+	main.health_component.current_health = 25
+	main.apply_run_modifiers()
+	check(main.health_component.max_health == 28 and main.health_component.current_health == 25, "Max-health upgrade healed or rounded incorrectly")
+	check(is_equal_approx(main.player.effective_basic_width_multiplier, 1.15), "Basic width upgrade was not applied")
+	check(is_equal_approx(main.player.effective_basic_reach_multiplier, 1.12), "Basic reach upgrade was not applied")
+	check(main.player.effective_basic_target_limit_add == 1, "Basic target-limit upgrade was not applied")
+	check(main.player.can_use_special(), "Sword node 07 did not enable the special")
+	main.health_component.current_health = 28
 	main.current_run["weapon"] = "spear"
 	main.apply_run_modifiers()
+	check(main.health_component.max_health == 26 and main.health_component.current_health == 26, "Switching to a lower maximum did not cap health")
 	main.current_run["weapon"] = "sword"
 	main.apply_run_modifiers()
-	check(main.player.effective_basic_damage == 6 and main.player.effective_special_damage == 10, "A-B-A switching accumulated or lost modifiers")
+	check(main.health_component.max_health == 28 and main.health_component.current_health == 26, "Switching back healed the player")
+	check(is_equal_approx(main.player.effective_basic_damage, 5.16) and is_equal_approx(main.player.effective_special_damage, 7.8), "A-B-A switching accumulated or lost modifiers")
 
 	var hammer_unlocked_before: bool = main.meta_progression["weapon_unlocks"]["hammer"]
+	main.current_run["weapon"] = "hammer"
+	main.apply_run_modifiers()
+	check(main.current_run["weapon"] == "sword", "Normal equipment bypassed Hammer ownership")
 	main.open_developer_weapon_screen()
 	check(main.dev_weapon_screen.visible and paused, "Developer weapon screen did not pause a live run")
 	main.equip_developer_weapon("hammer")

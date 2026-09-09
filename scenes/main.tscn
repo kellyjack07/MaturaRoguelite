@@ -3,6 +3,8 @@
 [ext_resource type="Script" uid="uid://bvvy3nm23icgx" path="res://scripts/main.gd" id="1_jyhfs"]
 [ext_resource type="PackedScene" uid="uid://cfgw2usaccukm" path="res://scenes/player.tscn" id="1_o5qli"]
 [ext_resource type="PackedScene" path="res://ui/dev_weapon_screen.tscn" id="3_dev_weapons"]
+[ext_resource type="PackedScene" path="res://ui/skill_tree_screen.tscn" id="4_skill_tree_ui"]
+[ext_resource type="PackedScene" path="res://ui/main_menu_screen.tscn" id="5_main_menu"]
 
 [node name="Main" type="Node2D" unique_id=686745571]
 script = ExtResource("1_jyhfs")
@@ -16,203 +18,9 @@ position = Vector2(31, 172)
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=716173769]
 
-[node name="MainMenuScreen" type="Control" parent="UI" unique_id=1600000001]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="MainMenuScreen" parent="UI" unique_id=1600000001 instance=ExtResource("5_main_menu")]
 
-[node name="Background" type="ColorRect" parent="UI/MainMenuScreen" unique_id=1600000002]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0.0627451, 0.0705882, 0.0941176, 1)
-
-[node name="TitleLabel" type="Label" parent="UI/MainMenuScreen" unique_id=1600000003]
-layout_mode = 0
-offset_left = 244.0
-offset_top = 34.0
-offset_right = 397.0
-offset_bottom = 64.0
-text = "Matura Roguelite"
-horizontal_alignment = 1
-
-[node name="MenuStatusLabel" type="Label" parent="UI/MainMenuScreen" unique_id=1600000004]
-layout_mode = 0
-offset_left = 190.0
-offset_top = 72.0
-offset_right = 451.0
-offset_bottom = 120.0
-horizontal_alignment = 1
-
-[node name="StartRunButton" type="Button" parent="UI/MainMenuScreen" unique_id=1600000005]
-layout_mode = 0
-offset_left = 260.0
-offset_top = 134.0
-offset_right = 380.0
-offset_bottom = 165.0
-text = "Start Run"
-
-[node name="ContinueRunButton" type="Button" parent="UI/MainMenuScreen" unique_id=1600000052]
-visible = false
-layout_mode = 0
-offset_left = 260.0
-offset_top = 174.0
-offset_right = 380.0
-offset_bottom = 205.0
-text = "Continue Run"
-
-[node name="GearStoreButton" type="Button" parent="UI/MainMenuScreen" unique_id=1600000006]
-layout_mode = 0
-offset_left = 260.0
-offset_top = 214.0
-offset_right = 380.0
-offset_bottom = 245.0
-text = "Gear Store"
-
-[node name="SettingsButton" type="Button" parent="UI/MainMenuScreen" unique_id=1600000007]
-layout_mode = 0
-offset_left = 260.0
-offset_top = 254.0
-offset_right = 380.0
-offset_bottom = 285.0
-text = "Settings"
-
-[node name="ResetSaveButton" type="Button" parent="UI/MainMenuScreen" unique_id=1600000053]
-layout_mode = 0
-offset_left = 260.0
-offset_top = 294.0
-offset_right = 380.0
-offset_bottom = 325.0
-text = "Reset Save"
-
-[node name="QuitButton" type="Button" parent="UI/MainMenuScreen" unique_id=1600000008]
-layout_mode = 0
-offset_left = 260.0
-offset_top = 331.0
-offset_right = 380.0
-offset_bottom = 362.0
-text = "Quit Game"
-
-[node name="GearStoreScreen" type="Control" parent="UI" unique_id=1600000010]
-visible = false
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Background" type="ColorRect" parent="UI/GearStoreScreen" unique_id=1600000011]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0.0431373, 0.0509804, 0.0784314, 0.96)
-
-[node name="TitleLabel" type="Label" parent="UI/GearStoreScreen" unique_id=1600000012]
-layout_mode = 0
-offset_left = 263.0
-offset_top = 18.0
-offset_right = 378.0
-offset_bottom = 43.0
-text = "Gear Store"
-horizontal_alignment = 1
-
-[node name="EssenceLabel" type="Label" parent="UI/GearStoreScreen" unique_id=1600000013]
-layout_mode = 0
-offset_left = 34.0
-offset_top = 22.0
-offset_right = 170.0
-offset_bottom = 45.0
-text = "Essence: 0"
-
-[node name="StoreInfoLabel" type="Label" parent="UI/GearStoreScreen" unique_id=1600000014]
-layout_mode = 0
-offset_left = 186.0
-offset_top = 48.0
-offset_right = 454.0
-offset_bottom = 90.0
-horizontal_alignment = 1
-
-[node name="UnlockSpearButton" type="Button" parent="UI/GearStoreScreen" unique_id=1600000015]
-layout_mode = 0
-offset_left = 57.0
-offset_top = 108.0
-offset_right = 290.0
-offset_bottom = 139.0
-text = "Unlock Spear"
-
-[node name="SwordDamageButton" type="Button" parent="UI/GearStoreScreen" unique_id=1600000016]
-layout_mode = 0
-offset_left = 57.0
-offset_top = 148.0
-offset_right = 290.0
-offset_bottom = 179.0
-text = "Sword Base Damage"
-
-[node name="SwordSpecialButton" type="Button" parent="UI/GearStoreScreen" unique_id=1600000017]
-layout_mode = 0
-offset_left = 57.0
-offset_top = 188.0
-offset_right = 290.0
-offset_bottom = 219.0
-text = "Sword Special Damage"
-
-[node name="SpearDamageButton" type="Button" parent="UI/GearStoreScreen" unique_id=1600000018]
-layout_mode = 0
-offset_left = 350.0
-offset_top = 148.0
-offset_right = 583.0
-offset_bottom = 179.0
-text = "Spear Base Damage"
-
-[node name="SpearSpecialButton" type="Button" parent="UI/GearStoreScreen" unique_id=1600000019]
-layout_mode = 0
-offset_left = 350.0
-offset_top = 188.0
-offset_right = 583.0
-offset_bottom = 219.0
-text = "Spear Special Damage"
-
-[node name="StarterGoldButton" type="Button" parent="UI/GearStoreScreen" unique_id=1600000020]
-layout_mode = 0
-offset_left = 57.0
-offset_top = 248.0
-offset_right = 290.0
-offset_bottom = 279.0
-text = "Starter Gold"
-
-[node name="RestBonusButton" type="Button" parent="UI/GearStoreScreen" unique_id=1600000021]
-layout_mode = 0
-offset_left = 350.0
-offset_top = 248.0
-offset_right = 583.0
-offset_bottom = 279.0
-text = "Rest Heal Bonus"
-
-[node name="LuckButton" type="Button" parent="UI/GearStoreScreen" unique_id=1600000022]
-layout_mode = 0
-offset_left = 204.0
-offset_top = 288.0
-offset_right = 436.0
-offset_bottom = 319.0
-text = "Lucky Charm"
-
-[node name="BackButton" type="Button" parent="UI/GearStoreScreen" unique_id=1600000023]
-layout_mode = 0
-offset_left = 270.0
-offset_top = 326.0
-offset_right = 370.0
-offset_bottom = 352.0
-text = "Back"
+[node name="GearStoreScreen" parent="UI" unique_id=1600000010 instance=ExtResource("4_skill_tree_ui")]
 
 [node name="SettingsScreen" type="Control" parent="UI" unique_id=1600000030]
 process_mode = 2
@@ -545,7 +353,8 @@ offset_right = 542.0
 offset_bottom = 27.0
 horizontal_alignment = 1
 
-[node name="DevWeaponScreen" parent="UI" instance=ExtResource("3_dev_weapons")]
+[node name="DevWeaponScreen" parent="UI" unique_id=1310078410 instance=ExtResource("3_dev_weapons")]
+visible = false
 
 [connection signal="died" from="Player" to="." method="_on_player_died"]
 [connection signal="pressed" from="UI/DeathScreen/RestartButton" to="." method="_on_restart_button_pressed"]

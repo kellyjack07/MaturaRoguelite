@@ -27,7 +27,7 @@ pulse_times = PackedFloat32Array(0.15)
 script = ExtResource("1_weapon")
 animations = {
 "basic_down": &"attack_down_sword",
-"basic_side": &"attack_down_sword",
+"basic_side": &"attack_side_sword",
 "basic_up": &"attack_up_sword",
 "dash_down": &"dash_down",
 "dash_side": &"dash_side",

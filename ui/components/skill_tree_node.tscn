@@ -1,0 +1,42 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/skill_tree_node.gd" id="1_node"]
+
+[node name="SkillTreeNode" type="Button"]
+layout_mode = 2
+mouse_default_cursor_shape = 2
+theme_type_variation = "SkillNode"
+script = ExtResource("1_node")
+
+[node name="SkillIcon" type="TextureRect" parent="."]
+texture_filter = 1
+layout_mode = 0
+offset_left = 5.0
+offset_top = 9.0
+offset_right = 29.0
+offset_bottom = 33.0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="DisplayIdLabel" type="Label" parent="."]
+layout_mode = 0
+offset_left = 30.0
+offset_top = 2.0
+offset_right = 62.0
+offset_bottom = 40.0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 9
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SelectionOverlay" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 4.0
+offset_top = 8.0
+offset_right = 30.0
+offset_bottom = 34.0
+mouse_filter = 2
+show_behind_parent = true
+expand_mode = 1
+stretch_mode = 5

@@ -1,0 +1,104 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Theme" path="res://ui/themes/dungeon_theme.tres" id="1_theme"]
+[ext_resource type="Script" path="res://scripts/ui/main_menu_screen.gd" id="2_controller"]
+[ext_resource type="Resource" path="res://data/ui/main_menu_layout.tres" id="3_layout"]
+
+[node name="MainMenuScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+texture_filter = 1
+theme = ExtResource("1_theme")
+script = ExtResource("2_controller")
+layout_resource = ExtResource("3_layout")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.72, 0.76, 0.82, 1)
+
+[node name="ContentScroll" type="ScrollContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 2
+follow_focus = true
+
+[node name="Content" type="VBoxContainer" parent="ContentScroll"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="ContentScroll/Content"]
+layout_mode = 2
+theme_type_variation = "MenuTitle"
+text = "Matura Roguelite"
+horizontal_alignment = 0
+mouse_filter = 2
+
+[node name="TitleGap" type="Control" parent="ContentScroll/Content"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="MenuStatusLabel" type="Label" parent="ContentScroll/Content"]
+layout_mode = 2
+theme_type_variation = "MenuStatus"
+text = "Meta progression saves automatically."
+autowrap_mode = 2
+mouse_filter = 2
+
+[node name="StatusGap" type="Control" parent="ContentScroll/Content"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="PrimaryButtons" type="VBoxContainer" parent="ContentScroll/Content"]
+layout_mode = 2
+
+[node name="ContinueRunButton" type="Button" parent="ContentScroll/Content/PrimaryButtons"]
+visible = false
+layout_mode = 2
+text = "Continue Run"
+
+[node name="StartRunButton" type="Button" parent="ContentScroll/Content/PrimaryButtons"]
+layout_mode = 2
+text = "Start Run"
+
+[node name="GearStoreButton" type="Button" parent="ContentScroll/Content/PrimaryButtons"]
+layout_mode = 2
+text = "Gear Store"
+
+[node name="SettingsButton" type="Button" parent="ContentScroll/Content/PrimaryButtons"]
+layout_mode = 2
+text = "Settings"
+
+[node name="QuitButton" type="Button" parent="ContentScroll/Content/PrimaryButtons"]
+layout_mode = 2
+text = "Quit Game"
+
+[node name="ResetGap" type="Control" parent="ContentScroll/Content"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="DeveloperLabel" type="Label" parent="ContentScroll/Content"]
+layout_mode = 2
+theme_type_variation = "MenuStatus"
+text = "Developer"
+mouse_filter = 2
+
+[node name="ResetSaveButton" type="Button" parent="ContentScroll/Content"]
+layout_mode = 2
+theme_type_variation = "DeveloperButton"
+text = "Reset Save"

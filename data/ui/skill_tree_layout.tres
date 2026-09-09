@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="SkillTreeLayout" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/skill_tree_layout.gd" id="1_layout"]
+
+[resource]
+script = ExtResource("1_layout")
+node_size = Vector2(64, 42)
+artwork_scale = 1
+vertical_node_gap = 18.0
+branch_gap = 18.0
+canvas_padding = Vector4(20, 20, 20, 20)
+header_spacing = 6.0
+footer_spacing = 6.0
+outer_margin = Vector4(12, 8, 12, 8)
+details_width = 190.0
+details_min_height = 112.0
+responsive_breakpoint = 560.0
+background_color = Color(0.72, 0.76, 0.82, 1)
+connector_purchased_color = Color(0.74, 0.86, 0.72, 1)
+connector_available_color = Color(0.72, 0.78, 0.9, 1)
+connector_locked_color = Color(0.28, 0.32, 0.42, 1)

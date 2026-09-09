@@ -1,0 +1,440 @@
+[gd_resource type="Resource" script_class="SkillTreeDefinition" format=3 uid="uid://iurk1jywr5ad"]
+
+[ext_resource type="Script" uid="uid://2i74saddw76g" path="res://scripts/progression/skill_tree_definition.gd" id="1_tree"]
+[ext_resource type="Script" uid="uid://cj4vfg2iixalv" path="res://scripts/progression/skill_node_definition.gd" id="2_node"]
+
+[sub_resource type="Resource" id="Node_root"]
+script = ExtResource("2_node")
+node_id = "root"
+display_id = "0"
+branch_id = "root"
+title = "Awaken the Arsenal"
+description = "Unlock the permanent weapon skill tree and the Sword branch."
+cost = 10
+
+[sub_resource type="Resource" id="Node_sword"]
+script = ExtResource("2_node")
+node_id = "sword"
+display_id = "1"
+branch_id = "sword"
+title = "Sword Branch"
+description = "Unlock permanent Sword upgrades. The Sword remains playable before this node."
+predecessor_id = "root"
+automatic_with = "root"
+
+[sub_resource type="Resource" id="Node_spear"]
+script = ExtResource("2_node")
+node_id = "spear"
+display_id = "2"
+branch_id = "spear"
+title = "Unlock Spear"
+description = "Own the Spear and unlock its permanent upgrade branch."
+cost = 30
+predecessor_id = "root"
+required_stage = 4
+
+[sub_resource type="Resource" id="Node_hammer"]
+script = ExtResource("2_node")
+node_id = "hammer"
+display_id = "3"
+branch_id = "hammer"
+title = "Unlock Hammer"
+description = "Own the Hammer and unlock its permanent upgrade branch."
+cost = 50
+predecessor_id = "root"
+required_stage = 7
+
+[sub_resource type="Resource" id="Node_sword_01"]
+script = ExtResource("2_node")
+node_id = "sword_01"
+display_id = "1-01"
+branch_id = "sword"
+order = 1
+title = "Sword Discipline I"
+description = "+10% character damage with Sword; +3% with other weapons."
+cost = 5
+predecessor_id = "sword"
+effect_type = "character_damage"
+effect_value = 0.1
+
+[sub_resource type="Resource" id="Node_sword_02"]
+script = ExtResource("2_node")
+node_id = "sword_02"
+display_id = "1-02"
+branch_id = "sword"
+order = 2
+title = "Sharpened Edge"
+description = "+12% Sword basic damage."
+cost = 8
+predecessor_id = "sword_01"
+effect_type = "basic_damage"
+effect_value = 0.12
+
+[sub_resource type="Resource" id="Node_sword_03"]
+script = ExtResource("2_node")
+node_id = "sword_03"
+display_id = "1-03"
+branch_id = "sword"
+order = 3
+title = "Wide Arc"
+description = "+15% Sword basic width."
+cost = 12
+predecessor_id = "sword_02"
+effect_type = "basic_width"
+effect_value = 0.15
+
+[sub_resource type="Resource" id="Node_sword_04"]
+script = ExtResource("2_node")
+node_id = "sword_04"
+display_id = "1-04"
+branch_id = "sword"
+order = 4
+title = "Tempered Guard"
+description = "+10% character max health with Sword; +3% with other weapons."
+cost = 17
+predecessor_id = "sword_03"
+effect_type = "character_max_health"
+effect_value = 0.1
+
+[sub_resource type="Resource" id="Node_sword_05"]
+script = ExtResource("2_node")
+node_id = "sword_05"
+display_id = "1-05"
+branch_id = "sword"
+order = 5
+title = "Follow-through"
+description = "Sword basic attacks can hit 1 additional target."
+cost = 23
+predecessor_id = "sword_04"
+effect_type = "basic_target_limit"
+effect_value = 1.0
+
+[sub_resource type="Resource" id="Node_sword_06"]
+script = ExtResource("2_node")
+node_id = "sword_06"
+display_id = "1-06"
+branch_id = "sword"
+order = 6
+title = "Long Edge"
+description = "+12% Sword basic reach."
+cost = 30
+predecessor_id = "sword_05"
+effect_type = "basic_reach"
+effect_value = 0.12
+
+[sub_resource type="Resource" id="Node_sword_07"]
+script = ExtResource("2_node")
+node_id = "sword_07"
+display_id = "1-07"
+branch_id = "sword"
+order = 7
+title = "Whirlwind"
+description = "Unlock the Sword special attack."
+cost = 38
+predecessor_id = "sword_06"
+effect_type = "special_unlock"
+effect_value = 1.0
+
+[sub_resource type="Resource" id="Node_sword_08"]
+script = ExtResource("2_node")
+node_id = "sword_08"
+display_id = "1-08"
+branch_id = "sword"
+order = 8
+title = "Light Footwork"
+description = "+10% character movement speed with Sword; +3% with other weapons."
+cost = 47
+predecessor_id = "sword_07"
+effect_type = "character_move_speed"
+effect_value = 0.1
+
+[sub_resource type="Resource" id="Node_sword_09"]
+script = ExtResource("2_node")
+node_id = "sword_09"
+display_id = "1-09"
+branch_id = "sword"
+order = 9
+title = "Violent Whirlwind"
+description = "+15% Sword special damage."
+cost = 57
+predecessor_id = "sword_08"
+effect_type = "special_damage"
+effect_value = 0.15
+
+[sub_resource type="Resource" id="Node_sword_10"]
+script = ExtResource("2_node")
+node_id = "sword_10"
+display_id = "1-10"
+branch_id = "sword"
+order = 10
+title = "Practised Whirlwind"
+description = "-15% Sword special cooldown."
+cost = 68
+predecessor_id = "sword_09"
+effect_type = "special_cooldown"
+effect_value = -0.15
+
+[sub_resource type="Resource" id="Node_spear_01"]
+script = ExtResource("2_node")
+node_id = "spear_01"
+display_id = "2-01"
+branch_id = "spear"
+order = 1
+title = "Spear Discipline I"
+description = "+10% character movement speed with Spear; +3% with other weapons."
+cost = 5
+predecessor_id = "spear"
+effect_type = "character_move_speed"
+effect_value = 0.1
+
+[sub_resource type="Resource" id="Node_spear_02"]
+script = ExtResource("2_node")
+node_id = "spear_02"
+display_id = "2-02"
+branch_id = "spear"
+order = 2
+title = "Long Thrust"
+description = "+15% Spear basic reach."
+cost = 8
+predecessor_id = "spear_01"
+effect_type = "basic_reach"
+effect_value = 0.15
+
+[sub_resource type="Resource" id="Node_spear_03"]
+script = ExtResource("2_node")
+node_id = "spear_03"
+display_id = "2-03"
+branch_id = "spear"
+order = 3
+title = "Piercing Point"
+description = "+12% Spear basic damage."
+cost = 12
+predecessor_id = "spear_02"
+effect_type = "basic_damage"
+effect_value = 0.12
+
+[sub_resource type="Resource" id="Node_spear_04"]
+script = ExtResource("2_node")
+node_id = "spear_04"
+display_id = "2-04"
+branch_id = "spear"
+order = 4
+title = "Spear Discipline II"
+description = "+10% character damage with Spear; +3% with other weapons."
+cost = 17
+predecessor_id = "spear_03"
+effect_type = "character_damage"
+effect_value = 0.1
+
+[sub_resource type="Resource" id="Node_spear_05"]
+script = ExtResource("2_node")
+node_id = "spear_05"
+display_id = "2-05"
+branch_id = "spear"
+order = 5
+title = "Skewer"
+description = "Spear basic attacks can hit 1 additional target."
+cost = 23
+predecessor_id = "spear_04"
+effect_type = "basic_target_limit"
+effect_value = 1.0
+
+[sub_resource type="Resource" id="Node_spear_06"]
+script = ExtResource("2_node")
+node_id = "spear_06"
+display_id = "2-06"
+branch_id = "spear"
+order = 6
+title = "Broad Point"
+description = "+15% Spear basic width."
+cost = 30
+predecessor_id = "spear_05"
+effect_type = "basic_width"
+effect_value = 0.15
+
+[sub_resource type="Resource" id="Node_spear_07"]
+script = ExtResource("2_node")
+node_id = "spear_07"
+display_id = "2-07"
+branch_id = "spear"
+order = 7
+title = "Flurry"
+description = "Unlock the Spear special attack."
+cost = 38
+predecessor_id = "spear_06"
+effect_type = "special_unlock"
+effect_value = 1.0
+
+[sub_resource type="Resource" id="Node_spear_08"]
+script = ExtResource("2_node")
+node_id = "spear_08"
+display_id = "2-08"
+branch_id = "spear"
+order = 8
+title = "Spear Discipline III"
+description = "+10% character max health with Spear; +3% with other weapons."
+cost = 47
+predecessor_id = "spear_07"
+effect_type = "character_max_health"
+effect_value = 0.1
+
+[sub_resource type="Resource" id="Node_spear_09"]
+script = ExtResource("2_node")
+node_id = "spear_09"
+display_id = "2-09"
+branch_id = "spear"
+order = 9
+title = "Relentless Flurry"
+description = "+15% Spear special damage."
+cost = 57
+predecessor_id = "spear_08"
+effect_type = "special_damage"
+effect_value = 0.15
+
+[sub_resource type="Resource" id="Node_spear_10"]
+script = ExtResource("2_node")
+node_id = "spear_10"
+display_id = "2-10"
+branch_id = "spear"
+order = 10
+title = "Practised Flurry"
+description = "-15% Spear special cooldown."
+cost = 68
+predecessor_id = "spear_09"
+effect_type = "special_cooldown"
+effect_value = -0.15
+
+[sub_resource type="Resource" id="Node_hammer_01"]
+script = ExtResource("2_node")
+node_id = "hammer_01"
+display_id = "3-01"
+branch_id = "hammer"
+order = 1
+title = "Hammer Discipline I"
+description = "+20% character max health with Hammer; +6% with other weapons."
+cost = 5
+predecessor_id = "hammer"
+effect_type = "character_max_health"
+effect_value = 0.2
+
+[sub_resource type="Resource" id="Node_hammer_02"]
+script = ExtResource("2_node")
+node_id = "hammer_02"
+display_id = "3-02"
+branch_id = "hammer"
+order = 2
+title = "Crushing Head"
+description = "+15% Hammer basic damage."
+cost = 8
+predecessor_id = "hammer_01"
+effect_type = "basic_damage"
+effect_value = 0.15
+
+[sub_resource type="Resource" id="Node_hammer_03"]
+script = ExtResource("2_node")
+node_id = "hammer_03"
+display_id = "3-03"
+branch_id = "hammer"
+order = 3
+title = "Impact Zone"
+description = "+15% Hammer basic attack area."
+cost = 12
+predecessor_id = "hammer_02"
+effect_type = "basic_area"
+effect_value = 0.15
+
+[sub_resource type="Resource" id="Node_hammer_04"]
+script = ExtResource("2_node")
+node_id = "hammer_04"
+display_id = "3-04"
+branch_id = "hammer"
+order = 4
+title = "Hammer Discipline II"
+description = "+10% character movement speed with Hammer; +3% with other weapons."
+cost = 17
+predecessor_id = "hammer_03"
+effect_type = "character_move_speed"
+effect_value = 0.1
+
+[sub_resource type="Resource" id="Node_hammer_05"]
+script = ExtResource("2_node")
+node_id = "hammer_05"
+display_id = "3-05"
+branch_id = "hammer"
+order = 5
+title = "Rolling Impact"
+description = "Hammer basic attacks can hit 1 additional target."
+cost = 23
+predecessor_id = "hammer_04"
+effect_type = "basic_target_limit"
+effect_value = 1.0
+
+[sub_resource type="Resource" id="Node_hammer_06"]
+script = ExtResource("2_node")
+node_id = "hammer_06"
+display_id = "3-06"
+branch_id = "hammer"
+order = 6
+title = "Extended Haft"
+description = "+12% Hammer basic reach."
+cost = 30
+predecessor_id = "hammer_05"
+effect_type = "basic_reach"
+effect_value = 0.12
+
+[sub_resource type="Resource" id="Node_hammer_07"]
+script = ExtResource("2_node")
+node_id = "hammer_07"
+display_id = "3-07"
+branch_id = "hammer"
+order = 7
+title = "Cataclysm"
+description = "Unlock the Hammer special attack."
+cost = 38
+predecessor_id = "hammer_06"
+effect_type = "special_unlock"
+effect_value = 1.0
+
+[sub_resource type="Resource" id="Node_hammer_08"]
+script = ExtResource("2_node")
+node_id = "hammer_08"
+display_id = "3-08"
+branch_id = "hammer"
+order = 8
+title = "Hammer Discipline III"
+description = "+10% character damage with Hammer; +3% with other weapons."
+cost = 47
+predecessor_id = "hammer_07"
+effect_type = "character_damage"
+effect_value = 0.1
+
+[sub_resource type="Resource" id="Node_hammer_09"]
+script = ExtResource("2_node")
+node_id = "hammer_09"
+display_id = "3-09"
+branch_id = "hammer"
+order = 9
+title = "Greater Cataclysm"
+description = "+15% Hammer special damage."
+cost = 57
+predecessor_id = "hammer_08"
+effect_type = "special_damage"
+effect_value = 0.15
+
+[sub_resource type="Resource" id="Node_hammer_10"]
+script = ExtResource("2_node")
+node_id = "hammer_10"
+display_id = "3-10"
+branch_id = "hammer"
+order = 10
+title = "Practised Cataclysm"
+description = "-15% Hammer special cooldown."
+cost = 68
+predecessor_id = "hammer_09"
+effect_type = "special_cooldown"
+effect_value = -0.15
+
+[resource]
+script = ExtResource("1_tree")
+branch_order = null
+nodes = Array[ExtResource("2_node")]([SubResource("Node_root"), SubResource("Node_sword"), SubResource("Node_spear"), SubResource("Node_hammer"), SubResource("Node_sword_01"), SubResource("Node_sword_02"), SubResource("Node_sword_03"), SubResource("Node_sword_04"), SubResource("Node_sword_05"), SubResource("Node_sword_06"), SubResource("Node_sword_07"), SubResource("Node_sword_08"), SubResource("Node_sword_09"), SubResource("Node_sword_10"), SubResource("Node_spear_01"), SubResource("Node_spear_02"), SubResource("Node_spear_03"), SubResource("Node_spear_04"), SubResource("Node_spear_05"), SubResource("Node_spear_06"), SubResource("Node_spear_07"), SubResource("Node_spear_08"), SubResource("Node_spear_09"), SubResource("Node_spear_10"), SubResource("Node_hammer_01"), SubResource("Node_hammer_02"), SubResource("Node_hammer_03"), SubResource("Node_hammer_04"), SubResource("Node_hammer_05"), SubResource("Node_hammer_06"), SubResource("Node_hammer_07"), SubResource("Node_hammer_08"), SubResource("Node_hammer_09"), SubResource("Node_hammer_10")])

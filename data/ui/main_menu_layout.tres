@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="MainMenuLayout" format=3 uid="uid://dff806qn3dr8t"]
+
+[ext_resource type="Script" path="res://scripts/ui/main_menu_layout.gd" id="1_layout"]
+
+[resource]
+script = ExtResource("1_layout")
+outer_margin = Vector4(94, 28, 48, 28)

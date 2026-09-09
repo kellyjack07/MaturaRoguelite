@@ -5,6 +5,7 @@
 - Move: WASD or arrow keys.
 - Basic attack: Space.
 - Special attack: Q.
+- In normal progression, each weapon's special requires its skill-tree node 07. The F6 screen is the explicit testing bypass and does not purchase that node.
 - Dash: Shift.
 - Developer weapon screen: F6, only in debug builds unless `enable_dev_weapon_screen_in_release` is explicitly enabled on `Main`.
 - Escape or F6 closes the developer screen. Opening it cancels the active attack/dash and pauses the scene tree; its controls continue processing while paused.

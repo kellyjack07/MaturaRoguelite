@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bljpf111mb4ek" path="res://scripts/player.gd" id="1_qhqgy"]
 [ext_resource type="Texture2D" uid="uid://ceu6xrfg44xio" path="res://assets/Character/Character Animations-Sheet.png" id="2_qlg0r"]
+[ext_resource type="Texture2D" uid="uid://dd6im45vl5emp" path="res://assets/Character/Character Animations-Sheet Sidesword.png" id="3_tuyoq"]
 [ext_resource type="Script" uid="uid://by6a20ksr22xh" path="res://scripts/health_component.gd" id="5_qlg0r"]
 [ext_resource type="Script" uid="uid://cc4hg5m86k3pi" path="res://scripts/hitbox_component.gd" id="6_tuyoq"]
 [ext_resource type="Script" uid="uid://bomvf3khf8d46" path="res://scripts/hurtbox_component.gd" id="7_fjrip"]
@@ -81,6 +82,22 @@ region = Rect2(192, 3120, 192, 208)
 [sub_resource type="AtlasTexture" id="AtlasTexture_l71n6"]
 atlas = ExtResource("2_qlg0r")
 region = Rect2(384, 3120, 192, 208)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jc3p3"]
+atlas = ExtResource("3_tuyoq")
+region = Rect2(0, 2704, 192, 208)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_3thuw"]
+atlas = ExtResource("3_tuyoq")
+region = Rect2(192, 2704, 192, 208)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_44dms"]
+atlas = ExtResource("3_tuyoq")
+region = Rect2(384, 2704, 192, 208)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_36p4m"]
+atlas = ExtResource("3_tuyoq")
+region = Rect2(576, 2704, 192, 208)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_ke2ow"]
 atlas = ExtResource("2_qlg0r")
@@ -716,6 +733,23 @@ animations = [{
 }, {
 "frames": [{
 "duration": 1.0,
+"texture": SubResource("AtlasTexture_jc3p3")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_3thuw")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_44dms")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_36p4m")
+}],
+"loop": false,
+"name": &"attack_side_sword",
+"speed": 10.0
+}, {
+"frames": [{
+"duration": 1.0,
 "texture": SubResource("AtlasTexture_ke2ow")
 }, {
 "duration": 1.0,
@@ -1260,7 +1294,9 @@ script = ExtResource("1_qhqgy")
 position = Vector2(0, -10)
 scale = Vector2(0.7, 0.7)
 sprite_frames = SubResource("SpriteFrames_6e8lb")
-animation = &"idle_down_sword"
+animation = &"attack_side_sword"
+frame = 3
+frame_progress = 1.0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=505140963]
 position = Vector2(0, 8)

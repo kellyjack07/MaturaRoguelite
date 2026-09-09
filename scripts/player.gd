@@ -48,8 +48,15 @@ var sampled_movement_multiplier: float = 1.0
 
 var equipped_weapon: Resource
 var equipped_weapon_id: String = "sword"
-var effective_basic_damage: int = 5
-var effective_special_damage: int = 8
+var effective_basic_damage: float = 5.0
+var effective_special_damage: float = 8.0
+var effective_basic_reach_multiplier: float = 1.0
+var effective_basic_width_multiplier: float = 1.0
+var effective_basic_area_multiplier: float = 1.0
+var effective_basic_target_limit_add: int = 0
+var effective_special_cooldown_multiplier: float = 1.0
+var special_unlocked: bool = false
+var developer_combat_bypass: bool = false
 var current_attack: Resource
 var action_elapsed: float = 0.0
 var current_pulse_index: int = 0
@@ -124,6 +131,8 @@ func start_attack() -> void:
 
 
 func start_special_attack() -> void:
+	if not can_use_special():
+		return
 	start_configured_attack(true)
 
 
@@ -141,17 +150,20 @@ func start_configured_attack(is_special: bool) -> void:
 	current_pulse_index = 0
 	update_attack_direction()
 	sampled_movement_multiplier = get_damage_multiplier()
-	var base_damage := effective_special_damage if is_special else effective_basic_damage
+	var base_damage: float = effective_special_damage if is_special else effective_basic_damage
 	last_damage_dealt = maxi(roundi(float(base_damage) * sampled_movement_multiplier), 1)
 
-	attack_area.start_attack(current_attack.max_targets)
+	var effective_target_limit: int = int(current_attack.max_targets)
+	if not is_special and effective_target_limit > 0:
+		effective_target_limit += effective_basic_target_limit_add
+	attack_area.start_attack(effective_target_limit)
 	attack_area.set_damage(last_damage_dealt)
-	apply_attack_shape(current_attack)
+	apply_attack_shape(current_attack, is_special)
 	update_attack_area_direction()
 	play_action_animation("special" if is_special else "basic")
 
 	if is_special:
-		special_cooldowns[equipped_weapon_id] = current_attack.cooldown
+		special_cooldowns[equipped_weapon_id] = get_special_cooldown_duration()
 	debug_state_changed.emit()
 
 
@@ -218,21 +230,27 @@ func cancel_actions_for_modal() -> void:
 	update_animation()
 
 
-func apply_attack_shape(attack_definition: Resource) -> void:
+func apply_attack_shape(attack_definition: Resource, is_special: bool = false) -> void:
+	var width_multiplier := 1.0 if is_special else effective_basic_width_multiplier
+	var area_multiplier := 1.0 if is_special else effective_basic_area_multiplier
+	var linear_area_scale := sqrt(maxf(area_multiplier, 0.0))
+	var effective_size: Vector2 = attack_definition.shape_size * linear_area_scale
+	effective_size.y *= width_multiplier
+	var effective_radius: float = attack_definition.shape_radius * linear_area_scale
 	var new_shape: Shape2D
 	match int(attack_definition.shape_kind):
 		2:
 			var circle := CircleShape2D.new()
-			circle.radius = attack_definition.shape_radius
+			circle.radius = effective_radius
 			new_shape = circle
 		1:
 			var capsule := CapsuleShape2D.new()
-			capsule.radius = attack_definition.shape_radius
-			capsule.height = maxf(attack_definition.shape_size.x, capsule.radius * 2.0)
+			capsule.radius = effective_radius * width_multiplier
+			capsule.height = maxf(effective_size.x, capsule.radius * 2.0)
 			new_shape = capsule
 		_:
 			var rectangle := RectangleShape2D.new()
-			rectangle.size = attack_definition.shape_size
+			rectangle.size = effective_size
 			new_shape = rectangle
 	attack_area.collision_shape.shape = new_shape
 
@@ -240,7 +258,8 @@ func apply_attack_shape(attack_definition: Resource) -> void:
 func update_attack_area_direction() -> void:
 	if current_attack == null:
 		return
-	attack_area.position = attack_direction.normalized() * current_attack.reach
+	var reach_multiplier := effective_basic_reach_multiplier if action_state == ActionState.BASIC_ATTACK else 1.0
+	attack_area.position = attack_direction.normalized() * current_attack.reach * reach_multiplier
 	if int(current_attack.shape_kind) == 2:
 		attack_area.rotation = 0.0
 	elif int(current_attack.shape_kind) == 1:
@@ -404,23 +423,55 @@ func equip_weapon(requested_weapon_id: String) -> String:
 	cancel_transient_actions(true)
 	equipped_weapon = WeaponRegistryScript.get_definition(normalized_id)
 	equipped_weapon_id = normalized_id
-	effective_basic_damage = equipped_weapon.basic_attack.base_damage
-	effective_special_damage = equipped_weapon.special_attack.base_damage
+	effective_basic_damage = float(equipped_weapon.basic_attack.base_damage)
+	effective_special_damage = float(equipped_weapon.special_attack.base_damage)
+	effective_basic_reach_multiplier = 1.0
+	effective_basic_width_multiplier = 1.0
+	effective_basic_area_multiplier = 1.0
+	effective_basic_target_limit_add = 0
+	effective_special_cooldown_multiplier = 1.0
+	special_unlocked = false
 	play_idle_animation()
 	weapon_equipped.emit(equipped_weapon_id)
 	debug_state_changed.emit()
 	return equipped_weapon_id
 
 
-func set_effective_attack_damage(basic_damage: int, special_damage: int) -> void:
-	effective_basic_damage = maxi(basic_damage, 1)
-	effective_special_damage = maxi(special_damage, 1)
-	base_attack_damage = effective_basic_damage
+func set_effective_attack_damage(basic_damage: float, special_damage: float) -> void:
+	effective_basic_damage = maxf(basic_damage, 1.0)
+	effective_special_damage = maxf(special_damage, 1.0)
+	base_attack_damage = roundi(effective_basic_damage)
+	debug_state_changed.emit()
+
+
+func set_effective_weapon_modifiers(
+	basic_reach_multiplier: float,
+	basic_width_multiplier: float,
+	basic_area_multiplier: float,
+	basic_target_limit_add: int,
+	special_cooldown_multiplier: float,
+	is_special_unlocked: bool
+) -> void:
+	effective_basic_reach_multiplier = maxf(basic_reach_multiplier, 0.0)
+	effective_basic_width_multiplier = maxf(basic_width_multiplier, 0.0)
+	effective_basic_area_multiplier = maxf(basic_area_multiplier, 0.0)
+	effective_basic_target_limit_add = maxi(basic_target_limit_add, 0)
+	effective_special_cooldown_multiplier = maxf(special_cooldown_multiplier, 0.0)
+	special_unlocked = is_special_unlocked
+	debug_state_changed.emit()
+
+
+func set_developer_combat_bypass(enabled: bool) -> void:
+	developer_combat_bypass = enabled
 	debug_state_changed.emit()
 
 
 func can_use_special() -> bool:
-	return action_state == ActionState.NORMAL and get_special_cooldown_left() <= 0.0
+	return (
+		action_state == ActionState.NORMAL
+		and (special_unlocked or developer_combat_bypass)
+		and get_special_cooldown_left() <= 0.0
+	)
 
 
 func get_special_cooldown_left() -> float:
@@ -430,7 +481,7 @@ func get_special_cooldown_left() -> float:
 func get_special_cooldown_duration() -> float:
 	if equipped_weapon == null or equipped_weapon.special_attack == null:
 		return 0.0
-	return equipped_weapon.special_attack.cooldown
+	return equipped_weapon.special_attack.cooldown * effective_special_cooldown_multiplier
 
 
 func get_cooldown_snapshot() -> Dictionary:

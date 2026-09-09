@@ -1,6 +1,7 @@
 extends Node2D
 
 const WeaponRegistryScript := preload("res://scripts/weapons/weapon_registry.gd")
+const SkillTreeServiceScript := preload("res://scripts/progression/skill_tree_service.gd")
 const DEFAULT_ROOM_SCENE := preload("res://rooms/graph_room.tscn")
 const DEFAULT_ENEMY_SCENE := preload("res://enemies/bone_scout_enemy.tscn")
 const TRAINING_DUMMY_2_SCENE := preload("res://enemies/training_dummy_2.tscn")
@@ -68,22 +69,16 @@ enum RoomEventType {
 @onready var room_label: Label = $UI/RoomLabel
 @onready var room_type_label: Label = $UI/RoomTypeLabel
 @onready var stage_map_label: Label = $UI/StageMapLabel
-@onready var main_menu_status_label: Label = $UI/MainMenuScreen/MenuStatusLabel
-@onready var continue_run_button: Button = $UI/MainMenuScreen/ContinueRunButton
-@onready var reset_save_button: Button = $UI/MainMenuScreen/ResetSaveButton
-@onready var gear_store_essence_label: Label = $UI/GearStoreScreen/EssenceLabel
-@onready var gear_store_info_label: Label = $UI/GearStoreScreen/StoreInfoLabel
+@onready var main_menu_status_label: Label = $UI/MainMenuScreen/ContentScroll/Content/MenuStatusLabel
+@onready var continue_run_button: Button = $UI/MainMenuScreen/ContentScroll/Content/PrimaryButtons/ContinueRunButton
+@onready var reset_save_button: Button = $UI/MainMenuScreen/ContentScroll/Content/ResetSaveButton
+@onready var gear_store_essence_label: Label = $UI/GearStoreScreen/OuterMargin/MainVBox/Header/EssenceLabel
 @onready var pause_run_info_label: Label = $UI/PauseMenuScreen/Panel/RunInfoLabel
 @onready var volume_slider: HSlider = $UI/SettingsScreen/VolumeSlider
 @onready var volume_value_label: Label = $UI/SettingsScreen/VolumeValueLabel
-@onready var unlock_spear_button: Button = $UI/GearStoreScreen/UnlockSpearButton
-@onready var sword_damage_button: Button = $UI/GearStoreScreen/SwordDamageButton
-@onready var sword_special_button: Button = $UI/GearStoreScreen/SwordSpecialButton
-@onready var spear_damage_button: Button = $UI/GearStoreScreen/SpearDamageButton
-@onready var spear_special_button: Button = $UI/GearStoreScreen/SpearSpecialButton
-@onready var starter_gold_button: Button = $UI/GearStoreScreen/StarterGoldButton
-@onready var rest_bonus_button: Button = $UI/GearStoreScreen/RestBonusButton
-@onready var luck_button: Button = $UI/GearStoreScreen/LuckButton
+@onready var starter_gold_button: Button = $UI/GearStoreScreen/OuterMargin/MainVBox/Footer/OtherGearRow/StarterGoldButton
+@onready var rest_bonus_button: Button = $UI/GearStoreScreen/OuterMargin/MainVBox/Footer/OtherGearRow/RestBonusButton
+@onready var luck_button: Button = $UI/GearStoreScreen/OuterMargin/MainVBox/Footer/OtherGearRow/LuckButton
 @onready var dev_weapon_screen: Control = $UI/DevWeaponScreen
 
 var hit_stop_active: bool = false
@@ -103,8 +98,11 @@ var run_active: bool = false
 var previous_menu_context: String = "main_menu"
 var default_player_base_attack_damage: int = 0
 var default_player_move_speed: float = 0.0
+var default_player_max_health: int = 0
 var meta_progression: Dictionary = {}
 var current_run: Dictionary = {}
+var skill_tree: SkillTreeService
+var loaded_legacy_skill_tree: bool = false
 var current_room_event_type: RoomEventType = RoomEventType.NONE
 var stage_room_nodes: Dictionary = {}
 var hallway_container: Node2D = null
@@ -116,6 +114,7 @@ var dev_menu_previous_pause_state: bool = false
 func _ready() -> void:
 	default_player_base_attack_damage = player.base_attack_damage
 	default_player_move_speed = player.move_speed
+	default_player_max_health = health_component.max_health
 
 	player.visible = false
 	player.set_physics_process(false)
@@ -133,6 +132,17 @@ func _ready() -> void:
 	player.death_started.connect(_on_player_death_started)
 
 	load_progress()
+	skill_tree = SkillTreeServiceScript.new()
+	skill_tree.name = "SkillTreeCore"
+	add_child(skill_tree)
+	skill_tree.setup(
+		meta_progression,
+		Callable(self, "save_progress"),
+		Callable(self, "_apply_skill_tree_purchase_to_run"),
+		loaded_legacy_skill_tree
+	)
+	skill_tree.changed.connect(_on_skill_tree_changed)
+	gear_store_screen.setup(self)
 	connect_ui_signals()
 	apply_settings_to_ui()
 	set_run_ui_visible(false)
@@ -144,12 +154,12 @@ func connect_ui_signals() -> void:
 	health_component.health_changed.connect(_on_player_health_changed)
 	player.debug_state_changed.connect(update_debug_ui)
 
-	$UI/MainMenuScreen/StartRunButton.pressed.connect(start_new_run)
-	$UI/MainMenuScreen/ContinueRunButton.pressed.connect(continue_saved_run)
-	$UI/MainMenuScreen/GearStoreButton.pressed.connect(open_gear_store)
-	$UI/MainMenuScreen/SettingsButton.pressed.connect(open_settings_from_main_menu)
-	$UI/MainMenuScreen/ResetSaveButton.pressed.connect(reset_all_save_data)
-	$UI/MainMenuScreen/QuitButton.pressed.connect(save_and_quit_game)
+	$UI/MainMenuScreen/ContentScroll/Content/PrimaryButtons/StartRunButton.pressed.connect(start_new_run)
+	$UI/MainMenuScreen/ContentScroll/Content/PrimaryButtons/ContinueRunButton.pressed.connect(continue_saved_run)
+	$UI/MainMenuScreen/ContentScroll/Content/PrimaryButtons/GearStoreButton.pressed.connect(open_gear_store)
+	$UI/MainMenuScreen/ContentScroll/Content/PrimaryButtons/SettingsButton.pressed.connect(open_settings_from_main_menu)
+	$UI/MainMenuScreen/ContentScroll/Content/ResetSaveButton.pressed.connect(reset_all_save_data)
+	$UI/MainMenuScreen/ContentScroll/Content/PrimaryButtons/QuitButton.pressed.connect(save_and_quit_game)
 
 	$UI/PauseMenuScreen/Panel/ResumeButton.pressed.connect(resume_run)
 	$UI/PauseMenuScreen/Panel/SettingsButton.pressed.connect(open_settings_from_pause_menu)
@@ -161,12 +171,7 @@ func connect_ui_signals() -> void:
 	$UI/SettingsScreen/BackButton.pressed.connect(close_settings_screen)
 	volume_slider.value_changed.connect(_on_volume_slider_value_changed)
 
-	$UI/GearStoreScreen/BackButton.pressed.connect(close_gear_store)
-	unlock_spear_button.pressed.connect(_on_unlock_spear_button_pressed)
-	sword_damage_button.pressed.connect(_on_sword_damage_button_pressed)
-	sword_special_button.pressed.connect(_on_sword_special_button_pressed)
-	spear_damage_button.pressed.connect(_on_spear_damage_button_pressed)
-	spear_special_button.pressed.connect(_on_spear_special_button_pressed)
+	$UI/GearStoreScreen/OuterMargin/MainVBox/Footer/BackRow/BackButton.pressed.connect(close_gear_store)
 	starter_gold_button.pressed.connect(_on_starter_gold_button_pressed)
 	rest_bonus_button.pressed.connect(_on_rest_bonus_button_pressed)
 	luck_button.pressed.connect(_on_luck_button_pressed)
@@ -253,6 +258,8 @@ func _input(event: InputEvent) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		if skill_tree != null:
+			skill_tree.commit_pending_eligibility()
 		save_progress()
 
 
@@ -268,8 +275,21 @@ func ensure_developer_input_action() -> void:
 #save/load
 func get_default_meta_progression() -> Dictionary:
 	return {
-		"essence": 20,
+		"essence": 0,
 		"highest_stage_completed": 0,
+		"skill_tree_version": 1,
+		"purchased_skill_nodes": [],
+		"tutorial_reward": {
+			"claimed": false,
+			"essence_granted": 0,
+		},
+		"pending_unlock_eligibility": [],
+		"committed_unlock_eligibility": [],
+		"legacy_skill_tree_bonuses": {
+			"sword": {"basic_damage_flat": 0.0, "special_damage_flat": 0.0},
+			"spear": {"basic_damage_flat": 0.0, "special_damage_flat": 0.0},
+			"hammer": {"basic_damage_flat": 0.0, "special_damage_flat": 0.0},
+		},
 		"weapon_unlocks": {
 			"sword": true,
 			"spear": false,
@@ -386,6 +406,7 @@ func ensure_stage_room_shape(room_data: Dictionary) -> Dictionary:
 func load_progress() -> void:
 	meta_progression = get_default_meta_progression()
 	current_run = {}
+	loaded_legacy_skill_tree = false
 
 	var config := ConfigFile.new()
 	if config.load(SAVE_FILE_PATH) != OK:
@@ -393,16 +414,17 @@ func load_progress() -> void:
 		return
 
 	meta_progression = config.get_value("meta", "progression", meta_progression)
+	loaded_legacy_skill_tree = not meta_progression.has("skill_tree_version")
 	current_run = config.get_value("run", "snapshot", {})
 	ensure_meta_progression_shape()
 	ensure_current_run_shape()
 
 
-func save_progress() -> void:
+func save_progress() -> Error:
 	var config := ConfigFile.new()
 	config.set_value("meta", "progression", meta_progression)
 	config.set_value("run", "snapshot", build_run_snapshot())
-	config.save(SAVE_FILE_PATH)
+	return config.save(SAVE_FILE_PATH)
 
 
 func delete_save_file() -> void:
@@ -471,14 +493,16 @@ func show_main_menu() -> void:
 	continue_run_button.visible = has_saved_run()
 	continue_run_button.disabled = not has_saved_run()
 	main_menu_status_label.text = get_main_menu_status_text()
+	if main_menu_screen.has_method("focus_initial_control"):
+		main_menu_screen.focus_initial_control()
 	set_run_ui_visible(false)
 	update_gear_store_ui()
 
 
 func get_main_menu_status_text() -> String:
 	if has_saved_run():
-		return "Saved run available.\nYou can continue your last run."
-	return "Placeholder main menu.\nMeta progression saves automatically."
+		return "Saved run available."
+	return "Meta progression saves automatically."
 
 
 func has_saved_run() -> bool:
@@ -491,6 +515,8 @@ func open_gear_store() -> void:
 	settings_screen.visible = false
 	gear_store_screen.visible = true
 	update_gear_store_ui()
+	if gear_store_screen.has_method("focus_first_control"):
+		gear_store_screen.focus_first_control()
 
 
 func close_gear_store() -> void:
@@ -574,14 +600,34 @@ func get_selected_weapon_id() -> String:
 
 
 func is_weapon_unlocked(weapon_id: String) -> bool:
-	return bool(meta_progression.get("weapon_unlocks", {}).get(weapon_id, false))
+	return skill_tree != null and skill_tree.is_weapon_owned(WeaponRegistryScript.normalize_weapon_id(weapon_id))
+
+
+func get_skill_tree_core() -> SkillTreeService:
+	return skill_tree
+
+
+func purchase_skill_node(node_id: String) -> Dictionary:
+	if skill_tree == null:
+		return {"success": false, "node_id": node_id, "code": "not_ready", "reason": "Skill tree is not ready.", "essence": 0}
+	return skill_tree.purchase(node_id)
+
+
+func _apply_skill_tree_purchase_to_run() -> void:
+	if run_active:
+		apply_run_modifiers(player.developer_combat_bypass)
+	update_debug_ui()
+
+
+func _on_skill_tree_changed() -> void:
+	update_gear_store_ui()
 
 
 func equip_developer_weapon(weapon_id: String) -> void:
 	if not dev_weapon_screen.visible or not run_active:
 		return
 	current_run["weapon"] = WeaponRegistryScript.normalize_weapon_id(weapon_id)
-	apply_run_modifiers()
+	apply_run_modifiers(true)
 	save_progress()
 	update_debug_ui()
 
@@ -603,8 +649,18 @@ func update_pause_menu_info() -> void:
 
 
 func save_and_quit_game() -> void:
+	if skill_tree != null:
+		skill_tree.commit_pending_eligibility()
 	save_progress()
 	get_tree().quit()
+
+
+func complete_run() -> void:
+	if skill_tree != null:
+		skill_tree.commit_pending_eligibility()
+	run_active = false
+	clear_saved_run_snapshot()
+	show_main_menu()
 
 
 func reset_all_save_data() -> void:
@@ -619,6 +675,14 @@ func reset_all_save_data() -> void:
 	get_tree().paused = false
 	meta_progression = get_default_meta_progression()
 	current_run = {}
+	loaded_legacy_skill_tree = false
+	if skill_tree != null:
+		skill_tree.setup(
+			meta_progression,
+			Callable(self, "save_progress"),
+			Callable(self, "_apply_skill_tree_purchase_to_run"),
+			false
+		)
 	save_progress()
 	show_main_menu()
 
@@ -635,51 +699,27 @@ func spend_essence(cost: int) -> void:
 
 
 func update_gear_store_ui() -> void:
-	gear_store_essence_label.text = "Essence: " + str(meta_progression["essence"])
-	gear_store_info_label.text = "Permanent meta progression.\nWeapon trees stay between runs."
-
-	var unlock_spear_cost: int = 10
-	if meta_progression["weapon_unlocks"]["spear"]:
-		unlock_spear_button.text = "Unlock Spear (Unlocked)"
-		unlock_spear_button.disabled = true
+	if gear_store_screen.has_method("refresh_ui"):
+		gear_store_screen.refresh_ui()
 	else:
-		unlock_spear_button.text = "Unlock Spear (%s Essence)" % str(unlock_spear_cost)
-		unlock_spear_button.disabled = not can_afford_essence(unlock_spear_cost)
-
-	var sword_base_level: int = meta_progression["weapon_trees"]["sword"]["base_damage"]
-	var sword_base_cost: int = 5 + sword_base_level * 3
-	sword_damage_button.text = "Sword Base Damage %s (%s Essence)" % [to_roman(sword_base_level + 1), str(sword_base_cost)]
-	sword_damage_button.disabled = not can_afford_essence(sword_base_cost)
-
-	var sword_special_level: int = meta_progression["weapon_trees"]["sword"]["special_damage"]
-	var sword_special_cost: int = 6 + sword_special_level * 3
-	sword_special_button.text = "Sword Special Damage %s (%s Essence)" % [to_roman(sword_special_level + 1), str(sword_special_cost)]
-	sword_special_button.disabled = not can_afford_essence(sword_special_cost)
-
-	var spear_unlocked: bool = meta_progression["weapon_unlocks"]["spear"]
-	var spear_base_level: int = meta_progression["weapon_trees"]["spear"]["base_damage"]
-	var spear_base_cost: int = 5 + spear_base_level * 3
-	spear_damage_button.text = "Spear Base Damage %s (%s Essence)" % [to_roman(spear_base_level + 1), str(spear_base_cost)]
-	spear_damage_button.disabled = (not spear_unlocked) or (not can_afford_essence(spear_base_cost))
-
-	var spear_special_level: int = meta_progression["weapon_trees"]["spear"]["special_damage"]
-	var spear_special_cost: int = 6 + spear_special_level * 3
-	spear_special_button.text = "Spear Special Damage %s (%s Essence)" % [to_roman(spear_special_level + 1), str(spear_special_cost)]
-	spear_special_button.disabled = (not spear_unlocked) or (not can_afford_essence(spear_special_cost))
+		gear_store_essence_label.text = "Essence: " + str(skill_tree.get_essence_balance() if skill_tree != null else meta_progression["essence"])
 
 	var starter_gold_level: int = meta_progression["gear"]["starter_gold"]
 	var starter_gold_cost: int = 4 + starter_gold_level * 2
-	starter_gold_button.text = "Starter Gold %s (%s Essence)" % [to_roman(starter_gold_level + 1), str(starter_gold_cost)]
+	starter_gold_button.text = "Gold %s | %sE" % [to_roman(starter_gold_level + 1), str(starter_gold_cost)]
+	starter_gold_button.tooltip_text = "Starter Gold %s (%s Essence)" % [to_roman(starter_gold_level + 1), str(starter_gold_cost)]
 	starter_gold_button.disabled = not can_afford_essence(starter_gold_cost)
 
 	var rest_bonus_level: int = meta_progression["gear"]["rest_bonus"]
 	var rest_bonus_cost: int = 4 + rest_bonus_level * 2
-	rest_bonus_button.text = "Rest Heal Bonus %s (%s Essence)" % [to_roman(rest_bonus_level + 1), str(rest_bonus_cost)]
+	rest_bonus_button.text = "Rest %s | %sE" % [to_roman(rest_bonus_level + 1), str(rest_bonus_cost)]
+	rest_bonus_button.tooltip_text = "Rest Heal Bonus %s (%s Essence)" % [to_roman(rest_bonus_level + 1), str(rest_bonus_cost)]
 	rest_bonus_button.disabled = not can_afford_essence(rest_bonus_cost)
 
 	var luck_level: int = meta_progression["gear"]["luck"]
 	var luck_cost: int = 4 + luck_level * 2
-	luck_button.text = "Lucky Charm %s (%s Essence)" % [to_roman(luck_level + 1), str(luck_cost)]
+	luck_button.text = "Luck %s | %sE" % [to_roman(luck_level + 1), str(luck_cost)]
+	luck_button.tooltip_text = "Lucky Charm %s (%s Essence)" % [to_roman(luck_level + 1), str(luck_cost)]
 	luck_button.disabled = not can_afford_essence(luck_cost)
 
 
@@ -690,54 +730,6 @@ func to_roman(value: int) -> String:
 	if value > numerals.size():
 		return str(value)
 	return numerals[value - 1]
-
-
-func _on_unlock_spear_button_pressed() -> void:
-	var cost: int = 10
-	if not can_afford_essence(cost):
-		return
-	meta_progression["weapon_unlocks"]["spear"] = true
-	spend_essence(cost)
-
-
-func _on_sword_damage_button_pressed() -> void:
-	var level: int = meta_progression["weapon_trees"]["sword"]["base_damage"]
-	var cost: int = 5 + level * 3
-	if not can_afford_essence(cost):
-		return
-	meta_progression["weapon_trees"]["sword"]["base_damage"] += 1
-	spend_essence(cost)
-
-
-func _on_sword_special_button_pressed() -> void:
-	var level: int = meta_progression["weapon_trees"]["sword"]["special_damage"]
-	var cost: int = 6 + level * 3
-	if not can_afford_essence(cost):
-		return
-	meta_progression["weapon_trees"]["sword"]["special_damage"] += 1
-	spend_essence(cost)
-
-
-func _on_spear_damage_button_pressed() -> void:
-	if not meta_progression["weapon_unlocks"]["spear"]:
-		return
-	var level: int = meta_progression["weapon_trees"]["spear"]["base_damage"]
-	var cost: int = 5 + level * 3
-	if not can_afford_essence(cost):
-		return
-	meta_progression["weapon_trees"]["spear"]["base_damage"] += 1
-	spend_essence(cost)
-
-
-func _on_spear_special_button_pressed() -> void:
-	if not meta_progression["weapon_unlocks"]["spear"]:
-		return
-	var level: int = meta_progression["weapon_trees"]["spear"]["special_damage"]
-	var cost: int = 6 + level * 3
-	if not can_afford_essence(cost):
-		return
-	meta_progression["weapon_trees"]["spear"]["special_damage"] += 1
-	spend_essence(cost)
 
 
 func _on_starter_gold_button_pressed() -> void:
@@ -791,7 +783,7 @@ func start_new_run() -> void:
 	player.visible = true
 	player.set_physics_process(true)
 	player.move_speed = default_player_move_speed
-	health_component.reset_health()
+	health_component.max_health = default_player_max_health
 	clear_active_room()
 	current_stage = 1
 	current_room_number = 0
@@ -807,6 +799,7 @@ func start_new_run() -> void:
 		"debuff_state": get_default_debuff_state(),
 	}
 	apply_run_modifiers()
+	health_component.reset_health()
 	set_run_ui_visible(true)
 	update_debug_ui()
 	start_stage()
@@ -831,6 +824,7 @@ func continue_saved_run() -> void:
 	player.visible = true
 	player.set_physics_process(true)
 	player.move_speed = default_player_move_speed
+	health_component.max_health = default_player_max_health
 	clear_active_room()
 
 	var saved_world: int = int(current_run.get("stage_world", 1))
@@ -850,12 +844,10 @@ func continue_saved_run() -> void:
 		boss_room_id = -1
 		start_room_id = -1
 
-	health_component.reset_health()
 	var saved_health: int = int(current_run.get("player_health", health_component.max_health))
+	apply_run_modifiers()
 	health_component.current_health = clampi(saved_health, 0, health_component.max_health)
 	health_component.health_changed.emit(health_component.current_health, health_component.max_health)
-
-	apply_run_modifiers()
 	set_run_ui_visible(true)
 	update_debug_ui()
 	start_stage()
@@ -865,21 +857,52 @@ func get_starting_gold() -> int:
 	return meta_progression["gear"]["starter_gold"] * 3
 
 
-func apply_run_modifiers() -> void:
+func apply_run_modifiers(developer_bypass: bool = false) -> void:
 	var weapon_name: String = WeaponRegistryScript.normalize_weapon_id(str(current_run.get("weapon", "sword")))
+	if not developer_bypass and (skill_tree == null or not skill_tree.is_weapon_owned(weapon_name)):
+		weapon_name = "sword"
 	current_run["weapon"] = player.equip_weapon(weapon_name)
+	player.set_developer_combat_bypass(developer_bypass)
 	var weapon_definition: Resource = WeaponRegistryScript.get_definition(weapon_name)
-	var weapon_tree: Dictionary = meta_progression.get("weapon_trees", {}).get(weapon_name, {})
-	var basic_damage_bonus: int = int(weapon_tree.get("base_damage", 0))
-	var special_damage_bonus: int = int(weapon_tree.get("special_damage", 0))
+	var stat_profile: Dictionary = skill_tree.get_stat_profile(weapon_name) if skill_tree != null else {}
 	var debuff_state: Dictionary = current_run.get("debuff_state", get_default_debuff_state())
-	var attack_penalty: int = int(debuff_state.get("attack_penalty", 0))
+	var attack_penalty: float = float(debuff_state.get("attack_penalty", 0))
 	var speed_penalty: float = float(debuff_state.get("speed_penalty", 0.0))
 
-	var effective_basic: int = maxi(int(weapon_definition.basic_attack.base_damage) + basic_damage_bonus - attack_penalty, 1)
-	var effective_special: int = maxi(int(weapon_definition.special_attack.base_damage) + special_damage_bonus - attack_penalty, 1)
+	# Immutable weapon/player bases -> migrated flat value -> weapon multiplier ->
+	# summed character multiplier -> existing flat run debuff -> final clamp/rounding.
+	var character_damage_multiplier := 1.0 + float(stat_profile.get("character_damage_bonus", 0.0))
+	var basic_before_debuff := (
+		(float(weapon_definition.basic_attack.base_damage) + float(stat_profile.get("legacy_basic_damage_flat", 0.0)))
+		* (1.0 + float(stat_profile.get("basic_damage_bonus", 0.0)))
+		* character_damage_multiplier
+	)
+	var special_before_debuff := (
+		(float(weapon_definition.special_attack.base_damage) + float(stat_profile.get("legacy_special_damage_flat", 0.0)))
+		* (1.0 + float(stat_profile.get("special_damage_bonus", 0.0)))
+		* character_damage_multiplier
+	)
+	var effective_basic: float = maxf(basic_before_debuff - attack_penalty, 1.0)
+	var effective_special: float = maxf(special_before_debuff - attack_penalty, 1.0)
 	player.set_effective_attack_damage(effective_basic, effective_special)
-	player.move_speed = max(default_player_move_speed - speed_penalty, 60.0)
+	player.set_effective_weapon_modifiers(
+		1.0 + float(stat_profile.get("basic_reach_bonus", 0.0)),
+		1.0 + float(stat_profile.get("basic_width_bonus", 0.0)),
+		1.0 + float(stat_profile.get("basic_area_bonus", 0.0)),
+		int(stat_profile.get("basic_target_limit_add", 0)),
+		1.0 + float(stat_profile.get("special_cooldown_bonus", 0.0)),
+		bool(stat_profile.get("special_unlocked", false))
+	)
+	player.move_speed = maxf(
+		default_player_move_speed * (1.0 + float(stat_profile.get("character_move_speed_bonus", 0.0))) - speed_penalty,
+		60.0
+	)
+	var previous_health := health_component.current_health
+	health_component.max_health = maxi(roundi(
+		float(default_player_max_health) * (1.0 + float(stat_profile.get("character_max_health_bonus", 0.0)))
+	), 1)
+	health_component.current_health = mini(previous_health, health_component.max_health)
+	health_component.health_changed.emit(health_component.current_health, health_component.max_health)
 
 
 func add_run_gold(amount: int) -> void:
@@ -915,7 +938,9 @@ func update_debug_ui() -> void:
 	health_label.text = "HP: " + str(health_component.current_health) + "/" + str(health_component.max_health)
 	gold_label.text = "Gold: " + str(current_run.get("gold", 0))
 	var weapon_definition: Resource = WeaponRegistryScript.get_definition(get_selected_weapon_id())
-	var special_status := "Ready" if player.get_special_cooldown_left() <= 0.0 else "%.1fs" % player.get_special_cooldown_left()
+	var special_status := "Locked"
+	if player.special_unlocked or player.developer_combat_bypass:
+		special_status = "Ready" if player.get_special_cooldown_left() <= 0.0 else "%.1fs" % player.get_special_cooldown_left()
 	weapon_label.text = "Weapon: %s | Special: %s" % [weapon_definition.display_name, special_status]
 	state_label.text = "State: " + get_player_state_text()
 	multiplier_label.text = "Multiplier: " + str(player.get_damage_multiplier())
@@ -1982,7 +2007,10 @@ func reveal_connected_rooms(room_id: int) -> void:
 
 func start_stage_transition() -> void:
 	meta_progression["highest_stage_completed"] = max(int(meta_progression.get("highest_stage_completed", 0)), current_stage)
-	save_progress()
+	if skill_tree != null:
+		skill_tree.record_stage_clear(current_stage)
+	else:
+		save_progress()
 	stage_transition_active = true
 	stage_transition_label.text = "Stage %s Complete\nStage %s Starting..." % [
 		get_stage_display_text(current_stage),
@@ -2110,7 +2138,7 @@ func apply_random_stage_debuff() -> Dictionary:
 	debuff_state["active_names"] = active_names
 	current_run["debuff_state"] = debuff_state
 
-	apply_run_modifiers()
+	apply_run_modifiers(player.developer_combat_bypass)
 	update_debug_ui()
 	return debuff_data
 
@@ -2308,6 +2336,8 @@ func _on_player_death_started() -> void:
 
 
 func _on_player_died() -> void:
+	if skill_tree != null:
+		skill_tree.commit_pending_eligibility()
 	run_active = false
 	clear_saved_run_snapshot()
 	call_deferred("show_death_screen")
