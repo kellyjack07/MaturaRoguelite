@@ -215,6 +215,8 @@ func test_death_and_reset(player: Node) -> void:
 
 func test_main_run_integration() -> void:
 	var main = MainScene.instantiate()
+	if OS.get_cmdline_user_args().has("--isolated"):
+		main.set_script(load("res://tests/hud_test_main.gd"))
 	root.add_child(main)
 	await process_frame
 	main.reset_all_save_data()

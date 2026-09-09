@@ -1,0 +1,14 @@
+[gd_resource type="Theme" load_steps=6 format=3]
+
+[ext_resource type="StyleBox" path="res://ui/themes/styles/regular_button_normal.tres" id="1_normal"]
+[ext_resource type="StyleBox" path="res://ui/themes/styles/regular_button_hover.tres" id="2_hover"]
+[ext_resource type="StyleBox" path="res://ui/themes/styles/regular_button_pressed.tres" id="3_pressed"]
+[ext_resource type="StyleBox" path="res://ui/themes/styles/regular_button_disabled.tres" id="4_disabled"]
+[ext_resource type="StyleBox" path="res://ui/themes/styles/regular_button_focus.tres" id="5_focus"]
+
+[resource]
+Button/styles/disabled = ExtResource("4_disabled")
+Button/styles/focus = ExtResource("5_focus")
+Button/styles/hover = ExtResource("2_hover")
+Button/styles/normal = ExtResource("1_normal")
+Button/styles/pressed = ExtResource("3_pressed")

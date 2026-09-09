@@ -59,16 +59,8 @@ enum RoomEventType {
 @onready var gear_store_screen: Control = $UI/GearStoreScreen
 @onready var settings_screen: Control = $UI/SettingsScreen
 @onready var pause_menu_screen: Control = $UI/PauseMenuScreen
-@onready var health_label: Label = $UI/HealthLabel
-@onready var gold_label: Label = $UI/GoldLabel
-@onready var weapon_label: Label = $UI/WeaponLabel
-@onready var state_label: Label = $UI/StateLabel
-@onready var multiplier_label: Label = $UI/MultiplierLabel
-@onready var damage_label: Label = $UI/DamageLabel
-@onready var stage_label: Label = $UI/StageLabel
-@onready var room_label: Label = $UI/RoomLabel
-@onready var room_type_label: Label = $UI/RoomTypeLabel
-@onready var stage_map_label: Label = $UI/StageMapLabel
+@onready var hud: Control = $UI/HUD
+@onready var run_background: CanvasLayer = $RunBackground
 @onready var main_menu_status_label: Label = $UI/MainMenuScreen/ContentScroll/Content/MenuStatusLabel
 @onready var continue_run_button: Button = $UI/MainMenuScreen/ContentScroll/Content/PrimaryButtons/ContinueRunButton
 @onready var reset_save_button: Button = $UI/MainMenuScreen/ContentScroll/Content/ResetSaveButton
@@ -143,6 +135,7 @@ func _ready() -> void:
 	)
 	skill_tree.changed.connect(_on_skill_tree_changed)
 	gear_store_screen.setup(self)
+	hud.bind_player(player)
 	connect_ui_signals()
 	apply_settings_to_ui()
 	set_run_ui_visible(false)
@@ -478,6 +471,7 @@ func apply_master_volume(volume_value: float) -> void:
 
 #menu ui
 func show_main_menu() -> void:
+	run_background.hide()
 	player.cancel_actions_for_modal()
 	player.visible = false
 	player.set_physics_process(false)
@@ -836,6 +830,7 @@ func continue_saved_run() -> void:
 	boss_room_id = int(current_run.get("boss_room_id", current_run.get("exit_room_id", -1)))
 	current_stage_rooms = current_run.get("stage_rooms", [])
 	ensure_current_run_shape()
+	restore_room_encounter_states()
 	player.set_cooldown_snapshot(current_run.get("weapon_cooldowns", {}))
 	if current_stage_rooms.is_empty():
 		current_stage_rooms = build_stage_graph()
@@ -855,6 +850,38 @@ func continue_saved_run() -> void:
 
 func get_starting_gold() -> int:
 	return meta_progression["gear"]["starter_gold"] * 3
+
+
+func restore_room_encounter_states() -> void:
+	for room in current_stage_rooms:
+		var type: RoomType = room["room_type"] as RoomType
+		if type != RoomType.COMBAT and type != RoomType.BOSS:
+			continue
+		# Older saves recorded initialization/count but no explicit clear flag.
+		if not room.has("combat_cleared"):
+			room["combat_cleared"] = room.get("completed", false) or (
+				room.get("initialized", false) and int(room.get("enemies_remaining", 0)) == 0)
+		if room.get("completed", false):
+			room["combat_cleared"] = true
+		if room["combat_cleared"]:
+			room["enemies_remaining"] = 0
+			if type == RoomType.BOSS:
+				room["completed"] = true
+		elif room.get("initialized", false):
+			# Enemy instances are not serialized: recreate the remaining encounter on entry.
+			if int(room.get("enemies_remaining", 0)) > 0:
+				room["resume_enemy_count"] = int(room["enemies_remaining"])
+			room["initialized"] = false
+
+
+func sync_room_doors(room: Dictionary) -> void:
+	var room_node: StageRoom = get_room_node(int(room["id"]))
+	if room_node == null:
+		return
+	var type: RoomType = room["room_type"] as RoomType
+	var combat: bool = type == RoomType.COMBAT or type == RoomType.BOSS
+	var cleared: bool = room.get("completed", false) or room.get("combat_cleared", false)
+	room_node.set_connected_doors_locked(combat and room.get("initialized", false) and not cleared)
 
 
 func apply_run_modifiers(developer_bypass: bool = false) -> void:
@@ -922,36 +949,40 @@ func spend_run_gold(amount: int) -> bool:
 
 #debug ui
 func set_run_ui_visible(is_visible: bool) -> void:
-	health_label.visible = is_visible
-	gold_label.visible = is_visible
-	weapon_label.visible = is_visible
-	state_label.visible = is_visible
-	multiplier_label.visible = is_visible
-	damage_label.visible = is_visible
-	stage_label.visible = is_visible
-	room_label.visible = is_visible
-	room_type_label.visible = is_visible
-	stage_map_label.visible = is_visible
+	hud.visible = is_visible
+	if is_visible:
+		run_background.show()
 
 
 func update_debug_ui() -> void:
-	health_label.text = "HP: " + str(health_component.current_health) + "/" + str(health_component.max_health)
-	gold_label.text = "Gold: " + str(current_run.get("gold", 0))
+	hud.set_health(health_component.current_health, health_component.max_health)
+	hud.set_gold(int(current_run.get("gold", 0)))
+	hud.set_stage(get_stage_display_text())
 	var weapon_definition: Resource = WeaponRegistryScript.get_definition(get_selected_weapon_id())
-	var special_status := "Locked"
-	if player.special_unlocked or player.developer_combat_bypass:
-		special_status = "Ready" if player.get_special_cooldown_left() <= 0.0 else "%.1fs" % player.get_special_cooldown_left()
-	weapon_label.text = "Weapon: %s | Special: %s" % [weapon_definition.display_name, special_status]
-	state_label.text = "State: " + get_player_state_text()
-	multiplier_label.text = "Multiplier: " + str(player.get_damage_multiplier())
-	damage_label.text = "Last Damage: %s (x%s sampled)" % [player.last_damage_dealt, player.sampled_movement_multiplier]
-	stage_label.text = "Stage: " + get_stage_display_text()
-	room_label.text = "Room: " + str(current_room_number) + "/" + str(current_stage_rooms.size())
-	room_type_label.text = "Room Type: " + get_current_room_type_text()
-	stage_map_label.text = get_stage_map_text()
-
+	hud.set_weapon(weapon_definition.display_name)
+	hud.set_debug_text("State: %s\nMultiplier: %s\nLast damage: %s (x%s sampled)" % [
+		get_player_state_text(), player.get_damage_multiplier(), player.last_damage_dealt, player.sampled_movement_multiplier])
 	if pause_menu_screen.visible:
 		update_pause_menu_info()
+
+
+func refresh_hud_map() -> void:
+	var visible_rooms: Array[Dictionary] = []
+	for room in current_stage_rooms:
+		var id: int = int(room["id"])
+		var adjacent: bool = is_room_connected_to_current(id)
+		var visited: bool = room.get("visited", false)
+		if not (visited or adjacent or id == current_room_id or room.get("revealed", false)):
+			continue
+		var known: bool = visited or adjacent or id == current_room_id
+		visible_rooms.append({
+			"id": id,
+			"position": Vector2(get_room_grid_position(room)),
+			"neighbors": room.get("neighbors", []).duplicate(),
+			"visited": visited,
+			"label": get_room_type_short_text(room["room_type"] as RoomType) if known else "?",
+		})
+	hud.set_map(visible_rooms, current_room_id)
 
 
 func get_player_state_text() -> String:
@@ -993,6 +1024,8 @@ func start_stage() -> void:
 	if spawn_room != null:
 		player.global_position = spawn_room.get_player_spawn_position()
 
+	refresh_hud_map()
+	update_debug_ui()
 	call_deferred("refresh_current_room_from_player_position")
 
 
@@ -1061,6 +1094,7 @@ func build_stage_rooms_from_positions(grid_positions: Array[Vector2i]) -> Array[
 			"revealed": false,
 			"completed": false,
 			"initialized": false,
+			"combat_cleared": false,
 			"connections": connection_directions,
 			"neighbors": neighbor_ids,
 			"enemies_remaining": 0,
@@ -1623,6 +1657,11 @@ func refresh_current_room_from_player_position() -> void:
 
 
 func _on_generated_room_entered(room: StageRoom) -> void:
+	if not is_instance_valid(room) or get_room_node(room.room_id) != room:
+		return
+	if current_room == room:
+		sync_room_doors(get_room_data_by_id(room.room_id))
+		return
 	current_room = room
 	current_room_id = room.room_id
 	current_room_number = current_room_id + 1
@@ -1650,19 +1689,19 @@ func handle_room_entry(room_data: Dictionary) -> void:
 			room_data["completed"] = true
 			room_node.hide_reward_interactable()
 			room_node.hide_stage_exit()
-			room_node.set_connected_doors_locked(false)
 			room_node.set_room_label("Start Room")
 		RoomType.COMBAT:
 			room_node.hide_stage_exit()
-			room_node.set_connected_doors_locked(not room_data.get("completed", false))
-			if not room_data.get("initialized", false):
+			if room_data.get("combat_cleared", false) and not room_data.get("completed", false):
+				on_combat_room_cleared(int(room_data["id"]))
+			elif not room_data.get("completed", false) and not room_data.get("initialized", false):
 				room_data["initialized"] = true
+				room_data["combat_cleared"] = false
 				set_room_data_by_id(room_data)
 				call_deferred("spawn_room_enemies", int(room_data["id"]))
 			if room_data.get("completed", false):
 				room_node.set_room_label("Combat Clear")
 		RoomType.BOSS:
-			room_node.set_connected_doors_locked(not room_data.get("completed", false))
 			if not room_data.get("completed", false) and not room_data.get("initialized", false):
 				room_data["initialized"] = true
 				set_room_data_by_id(room_data)
@@ -1682,7 +1721,6 @@ func handle_room_entry(room_data: Dictionary) -> void:
 				room_node.set_room_label("Boss Room")
 		RoomType.REWARD:
 			room_node.hide_stage_exit()
-			room_node.set_connected_doors_locked(false)
 			if room_data.get("completed", false):
 				room_node.hide_reward_interactable()
 				room_node.set_room_label("Reward Taken")
@@ -1695,7 +1733,6 @@ func handle_room_entry(room_data: Dictionary) -> void:
 				room_data["completed"] = true
 			room_node.hide_reward_interactable()
 			room_node.hide_stage_exit()
-			room_node.set_connected_doors_locked(false)
 			room_node.set_room_label("Rest Room")
 		RoomType.DEBUFF:
 			if not room_data.get("initialized", false):
@@ -1703,8 +1740,9 @@ func handle_room_entry(room_data: Dictionary) -> void:
 				show_debuff_room_event()
 			room_node.hide_reward_interactable()
 			room_node.hide_stage_exit()
-			room_node.set_connected_doors_locked(false)
 			room_node.set_room_label("Debuff Room")
+	set_room_data_by_id(room_data)
+	sync_room_doors(room_data)
 
 
 func apply_rest_room_effect() -> void:
@@ -1742,13 +1780,22 @@ func spawn_room_enemies(room_id: int) -> void:
 		return
 
 	var room_data: Dictionary = get_room_data_by_id(room_id)
+	if room_data.get("completed", false) or room_data.get("combat_cleared", false):
+		sync_room_doors(room_data)
+		return
+	for existing_enemy in enemy_container.get_children():
+		if int(existing_enemy.get_meta("room_id", -1)) == room_id and not existing_enemy.is_queued_for_deletion():
+			return
 	var enemy_spawn_positions: Array[Vector2] = room_node.get_enemy_spawn_positions()
 	var enemy_count: int = get_enemy_count_for_room(room_id, enemy_spawn_positions.size())
+	if room_data.has("resume_enemy_count"):
+		enemy_count = mini(int(room_data["resume_enemy_count"]), enemy_spawn_positions.size())
+		room_data.erase("resume_enemy_count")
 	room_data["enemies_remaining"] = enemy_count
 	set_room_data_by_id(room_data)
 
 	if enemy_count == 0:
-		mark_room_completed(room_id)
+		on_combat_room_cleared(room_id)
 		return
 
 	var room_enemy_scene: PackedScene = get_enemy_scene_for_room(room_data)
@@ -1977,7 +2024,9 @@ func get_room_type_short_text(room_type: RoomType) -> String:
 
 
 func update_stage_room_visuals() -> void:
+	refresh_hud_map()
 	for room_data in current_stage_rooms:
+		sync_room_doors(room_data)
 		var room_node: StageRoom = get_room_node(int(room_data["id"]))
 		if room_node == null:
 			continue
@@ -2012,6 +2061,7 @@ func start_stage_transition() -> void:
 	else:
 		save_progress()
 	stage_transition_active = true
+	set_run_ui_visible(false)
 	stage_transition_label.text = "Stage %s Complete\nStage %s Starting..." % [
 		get_stage_display_text(current_stage),
 		get_stage_display_text(current_stage + 1),
@@ -2033,6 +2083,7 @@ func finish_stage_transition() -> void:
 	boss_room_id = -1
 	clear_active_room()
 	stage_transition_active = false
+	set_run_ui_visible(true)
 	player.set_physics_process(true)
 	start_stage()
 
@@ -2050,6 +2101,13 @@ func _on_room_enemy_died(room_id: int) -> void:
 
 
 func on_combat_room_cleared(room_id: int) -> void:
+	var cleared_data: Dictionary = get_room_data_by_id(room_id)
+	if cleared_data.is_empty():
+		return
+	cleared_data["combat_cleared"] = true
+	cleared_data["enemies_remaining"] = 0
+	set_room_data_by_id(cleared_data)
+	sync_room_doors(cleared_data)
 	current_room_id = room_id
 	current_room = get_room_node(room_id)
 	if get_current_room_type() == RoomType.BOSS:
@@ -2331,6 +2389,7 @@ func _on_stage_exit_requested(room: StageRoom) -> void:
 
 #player death
 func _on_player_death_started() -> void:
+	set_run_ui_visible(false)
 	close_developer_weapon_screen()
 	enemy_container.process_mode = Node.PROCESS_MODE_DISABLED
 
@@ -2344,6 +2403,8 @@ func _on_player_died() -> void:
 
 
 func show_death_screen() -> void:
+	run_background.hide()
+	set_run_ui_visible(false)
 	death_screen.visible = true
 	get_tree().paused = true
 
@@ -2363,7 +2424,7 @@ func trigger_hit_stop() -> void:
 
 #health ui
 func _on_player_health_changed(current_health: int, max_health: int) -> void:
-	health_label.text = "HP: " + str(current_health) + "/" + str(max_health)
+	hud.set_health(current_health, max_health)
 
 
 #restart

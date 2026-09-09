@@ -15,7 +15,7 @@ Open `ui/themes/dungeon_theme.tres` in the Inspector:
 - `Default Font Size` changes the base size.
 - `Button > Font Sizes > Font Size` changes ordinary button text.
 - `Button > Colors > Font Color`, `Font Hover Color`, `Font Pressed Color`, `Font Focus Color`, and `Font Disabled Color` control button text. Keep these dark for contrast with the light background.
-- `Button > Styles > Normal`, `Hover`, `Pressed`, `Focus`, and `Disabled` control the shared button backgrounds and focus outline. The normal and pressed styles use the supplied 16×16 sliced textures.
+- `Button > Styles > Normal`, `Hover`, `Pressed`, `Focus`, and `Disabled` reference the shared regular-button styles in `ui/themes/styles/`. The normal and pressed styles use the supplied 16×16 sliced textures.
 - `Label > Colors > Font Color` and `Label > Font Sizes > Font Size` control ordinary labels.
 - The `MenuTitle` variation controls the title (`Font Sizes > Font Size` and `Colors > Font Color`).
 - The `MenuStatus` variation controls the status/developer label.

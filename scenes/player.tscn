@@ -1287,6 +1287,7 @@ height = 24.0
 
 [node name="Player" type="CharacterBody2D" unique_id=488959924 groups=["player"]]
 z_index = 10
+scale = Vector2(0.8, 0.8)
 collision_layer = 2
 script = ExtResource("1_qhqgy")
 

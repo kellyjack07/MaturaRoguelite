@@ -45,6 +45,7 @@ var room_type_name: String = "combat"
 var connection_directions: Array[String] = []
 var player_in_reward_range: bool = false
 var player_in_stage_exit_range: bool = false
+var door_lock_states: Dictionary = {}
 
 
 #setup
@@ -127,6 +128,9 @@ func set_connected_doors_locked(locked: bool) -> void:
 
 
 func set_direction_door_locked(direction: String, locked: bool) -> void:
+	if door_lock_states.has(direction) and door_lock_states[direction] == locked:
+		return
+	door_lock_states[direction] = locked
 	var direction_name: String = direction.capitalize()
 	var direction_door_nodes: Array[Node] = get_direction_door_nodes(direction_name)
 	if direction_door_nodes.is_empty():
@@ -156,6 +160,9 @@ func get_door_blocker_shape(door_node: Node, direction_name: String) -> Collisio
 	var named_blocker_shape := get_node_or_null("%s/%sDoorBlocker/CollisionShape2D" % [door_node.get_path(), direction_name]) as CollisionShape2D
 	if named_blocker_shape != null:
 		return named_blocker_shape
+	# A shared Door root must never fall back to another direction's collider.
+	if door_node == door_root:
+		return null
 
 	var blocker_nodes: Array[Node] = door_node.find_children("*DoorBlocker", "StaticBody2D", true, false)
 	for blocker_node in blocker_nodes:
@@ -182,7 +189,7 @@ func play_matching_door_animations(door_node: Node, direction_name: String, lock
 				chosen_animation_name = animation_name_string
 				break
 
-		if chosen_animation_name.is_empty():
+		if chosen_animation_name.is_empty() and door_node != door_root:
 			for animation_name in sprite.sprite_frames.get_animation_names():
 				var animation_name_string: String = str(animation_name)
 				if animation_name_string.ends_with(animation_suffix):

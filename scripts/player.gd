@@ -84,14 +84,15 @@ func _physics_process(delta: float) -> void:
 	get_input_direction()
 	update_facing_direction()
 
-	if action_state != ActionState.DEAD and action_state != ActionState.HURT:
+	if action_state != ActionState.DEAD:
 		handle_dash_input()
 		update_movement_state()
 		handle_attack_input()
 
 	update_action(delta)
 
-	if action_state == ActionState.DEAD or action_state == ActionState.HURT:
+	# Hurt feedback does not prevent movement or dashing.
+	if action_state == ActionState.DEAD:
 		velocity = Vector2.ZERO
 	elif is_dashing:
 		update_dash(delta)
