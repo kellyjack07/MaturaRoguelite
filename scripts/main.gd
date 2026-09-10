@@ -7,6 +7,7 @@ const DEFAULT_ENEMY_SCENE := preload("res://enemies/bone_scout_enemy.tscn")
 const TRAINING_DUMMY_2_SCENE := preload("res://enemies/training_dummy_2.tscn")
 const GOBLIN_BARREL_SCENE := preload("res://enemies/goblin_barrel.tscn")
 const SAVE_FILE_PATH := "user://savegame.cfg"
+const REST_SHOP_SETTINGS = preload("res://data/ui/rest_shop_settings.tres")
 
 enum RoomType {
 	START,
@@ -31,7 +32,6 @@ enum RoomEventType {
 @export var stage_one_combat_max: int = 4
 @export var reward_rooms_per_stage: int = 1
 @export var rest_rooms_per_stage: int = 1
-@export var rest_room_heal_amount: int = 3
 @export var replay_debuff_rooms_min: int = 2
 @export var replay_debuff_rooms_max: int = 3
 @export var reward_room_buy_heal_amount: int = 2
@@ -60,6 +60,7 @@ enum RoomEventType {
 @onready var settings_screen: Control = $UI/SettingsScreen
 @onready var pause_menu_screen: Control = $UI/PauseMenuScreen
 @onready var hud: Control = $UI/HUD
+@onready var rest_shop: Control = $UI/RestShop
 @onready var run_background: CanvasLayer = $RunBackground
 @onready var main_menu_status_label: Label = $UI/MainMenuScreen/ContentScroll/Content/MenuStatusLabel
 @onready var continue_run_button: Button = $UI/MainMenuScreen/ContentScroll/Content/PrimaryButtons/ContinueRunButton
@@ -157,6 +158,8 @@ func connect_ui_signals() -> void:
 	$UI/PauseMenuScreen/Panel/ResumeButton.pressed.connect(resume_run)
 	$UI/PauseMenuScreen/Panel/SettingsButton.pressed.connect(open_settings_from_pause_menu)
 	$UI/PauseMenuScreen/Panel/SaveQuitButton.pressed.connect(save_and_quit_game)
+	$UI/PauseMenuScreen/Panel/MainMenuButton.pressed.connect(return_to_main_menu)
+	$UI/DeathScreen/MainMenuButton.pressed.connect(return_to_main_menu)
 	room_event_primary_button.pressed.connect(_on_room_event_primary_button_pressed)
 	room_event_secondary_button.pressed.connect(_on_room_event_secondary_button_pressed)
 	room_event_tertiary_button.pressed.connect(_on_room_event_tertiary_button_pressed)
@@ -172,6 +175,8 @@ func connect_ui_signals() -> void:
 
 #input
 func _unhandled_input(event: InputEvent) -> void:
+	if rest_shop.visible:
+		return
 	if not event is InputEventKey:
 		return
 	if not event.pressed or event.echo:
@@ -268,7 +273,7 @@ func ensure_developer_input_action() -> void:
 #save/load
 func get_default_meta_progression() -> Dictionary:
 	return {
-		"essence": 0,
+		"essence": 100,
 		"highest_stage_completed": 0,
 		"skill_tree_version": 1,
 		"purchased_skill_nodes": [],
@@ -427,7 +432,7 @@ func delete_save_file() -> void:
 
 func build_run_snapshot() -> Dictionary:
 	if not run_active:
-		return {"has_saved_run": false}
+		return current_run.duplicate(true) if has_saved_run() else {"has_saved_run": false}
 
 	return {
 		"has_saved_run": true,
@@ -470,7 +475,21 @@ func apply_master_volume(volume_value: float) -> void:
 
 
 #menu ui
+func return_to_main_menu() -> void:
+	if run_active:
+		var snapshot := build_run_snapshot().duplicate(true)
+		if save_progress() != OK:
+			pause_run_info_label.text = "Could not save run.\nPlease try again."
+			return
+		current_run = snapshot
+		run_active = false
+	player.cancel_actions_for_modal()
+	clear_active_room()
+	show_main_menu()
+
+
 func show_main_menu() -> void:
+	rest_shop.close_shop()
 	run_background.hide()
 	player.cancel_actions_for_modal()
 	player.visible = false
@@ -1487,6 +1506,10 @@ func instantiate_stage_graph() -> void:
 		room_instance.reward_interaction_requested.connect(_on_reward_interaction_requested)
 		room_instance.stage_exit_requested.connect(_on_stage_exit_requested)
 		stage_room_nodes[int(room_data["id"])] = room_instance
+		if room_data["room_type"] == RoomType.REST:
+			room_instance.configure_rest_chest(room_data.get("completed", false))
+		elif room_data["room_type"] == RoomType.REWARD:
+			room_instance.configure_shop_chest(room_data.get("completed", false))
 
 	draw_stage_hallways()
 	update_stage_room_visuals()
@@ -1721,17 +1744,10 @@ func handle_room_entry(room_data: Dictionary) -> void:
 				room_node.set_room_label("Boss Room")
 		RoomType.REWARD:
 			room_node.hide_stage_exit()
-			if room_data.get("completed", false):
-				room_node.hide_reward_interactable()
-				room_node.set_room_label("Reward Taken")
-			else:
-				room_node.show_reward_interactable("Press E\nChoose Reward")
+			room_node.configure_shop_chest(room_data.get("completed", false))
+			room_node.set_room_label("Shop Room")
 		RoomType.REST:
-			if not room_data.get("initialized", false):
-				apply_rest_room_effect()
-				room_data["initialized"] = true
-				room_data["completed"] = true
-			room_node.hide_reward_interactable()
+			room_node.configure_rest_chest(room_data.get("completed", false))
 			room_node.hide_stage_exit()
 			room_node.set_room_label("Rest Room")
 		RoomType.DEBUFF:
@@ -1745,19 +1761,51 @@ func handle_room_entry(room_data: Dictionary) -> void:
 	sync_room_doors(room_data)
 
 
-func apply_rest_room_effect() -> void:
-	var previous_health: int = health_component.current_health
-	var debuff_state: Dictionary = current_run.get("debuff_state", get_default_debuff_state())
-	var heal_amount: int = rest_room_heal_amount + meta_progression["gear"]["rest_bonus"] - int(debuff_state.get("rest_penalty", 0))
-	heal_amount = max(heal_amount, 0)
-	health_component.heal(heal_amount)
-	var healed_amount: int = health_component.current_health - previous_health
+func get_rest_shop_offer(room_id: int, potion: String) -> Dictionary:
+	var room := get_room_data_by_id(room_id)
+	var cost: int = REST_SHOP_SETTINGS.big_cost if potion == "big" else 0
+	var fraction: float = REST_SHOP_SETTINGS.big_heal_fraction if potion == "big" else REST_SHOP_SETTINGS.small_heal_fraction
+	var penalty: int = int(current_run.get("debuff_state", {}).get("rest_penalty", 0))
+	var bonus: int = int(meta_progression.get("gear", {}).get("rest_bonus", 0))
+	var healing := maxi(ceili(health_component.max_health * fraction) + bonus - penalty, 0)
+	healing = mini(healing, maxi(health_component.max_health - health_component.current_health, 0))
+	var reason := ""
+	if potion not in ["small", "big"] or room.is_empty() or room.get("room_type", -1) != RoomType.REST:
+		reason = "Invalid rest offer."
+	elif not run_active or health_component.is_dead():
+		reason = "No active player."
+	elif room.get("completed", false):
+		reason = "This chest has been used."
+	elif healing == 0:
+		reason = "No healing available."
+	elif int(current_run.get("gold", 0)) < cost:
+		reason = "Not enough gold."
+	return {"available": reason.is_empty(), "reason": reason, "heal": healing, "cost": cost}
 
-	if current_room != null:
-		if healed_amount > 0:
-			current_room.set_room_label("Rested +" + str(healed_amount) + " HP")
-		else:
-			current_room.set_room_label("Rested 0 HP")
+
+func select_rest_shop_offer(room_id: int, potion: String) -> Dictionary:
+	if not rest_shop.visible or rest_shop.room_id != room_id:
+		return {"success": false, "reason": "Open this chest first."}
+	var offer := get_rest_shop_offer(room_id, potion)
+	if not offer.available:
+		return {"success": false, "reason": offer.reason}
+	var room := get_room_data_by_id(room_id)
+	var old_health: int = health_component.current_health
+	var old_gold: int = int(current_run.get("gold", 0))
+	current_run["gold"] = old_gold - int(offer.cost)
+	room["completed"] = true
+	health_component.heal(int(offer.heal))
+	set_room_data_by_id(room)
+	if save_progress() != OK:
+		current_run["gold"] = old_gold
+		room["completed"] = false
+		health_component.current_health = old_health
+		health_component.health_changed.emit(old_health, health_component.max_health)
+		set_room_data_by_id(room)
+		update_debug_ui()
+		return {"success": false, "reason": "Could not save. Please try again."}
+	update_debug_ui()
+	return {"success": true, "reason": ""}
 
 
 func show_debuff_room_event() -> void:
@@ -2014,9 +2062,9 @@ func get_room_type_short_text(room_type: RoomType) -> String:
 		RoomType.BOSS:
 			return "B"
 		RoomType.REWARD:
-			return "R"
+			return "SH"
 		RoomType.REST:
-			return "H"
+			return "R"
 		RoomType.DEBUFF:
 			return "D"
 		_:
@@ -2055,6 +2103,7 @@ func reveal_connected_rooms(room_id: int) -> void:
 
 
 func start_stage_transition() -> void:
+	rest_shop.close_shop()
 	meta_progression["highest_stage_completed"] = max(int(meta_progression.get("highest_stage_completed", 0)), current_stage)
 	if skill_tree != null:
 		skill_tree.record_stage_clear(current_stage)
@@ -2274,6 +2323,10 @@ func _on_room_event_tertiary_button_pressed() -> void:
 
 
 func _on_reward_interaction_requested(room: StageRoom) -> void:
+	if get_room_data_by_id(room.room_id).get("room_type", -1) == RoomType.REST:
+		if not get_room_data_by_id(room.room_id).get("completed", false):
+			rest_shop.open_shop(self, room.room_id)
+		return
 	current_room = room
 	current_room_id = room.room_id
 	if current_room == null:
@@ -2296,7 +2349,7 @@ func _on_reward_interaction_requested(room: StageRoom) -> void:
 
 	current_room.hide_reward_interactable()
 	show_room_event(
-		"Reward Room",
+		"Shop Room",
 		"Choose one reward.\n\nFree: +1 Gold\nBuy: Heal %s HP for %s Gold" % [
 			str(reward_room_buy_heal_amount),
 			str(reward_room_buy_heal_cost),
@@ -2306,13 +2359,14 @@ func _on_reward_interaction_requested(room: StageRoom) -> void:
 		"Buy Healing",
 		"Leave",
 	)
+	current_room.set_rest_chest_pose("opening")
 
 
 func resolve_reward_room(exit_text: String) -> void:
 	hide_room_event()
 	mark_current_room_completed()
 	if current_room != null:
-		current_room.hide_reward_interactable()
+		current_room.configure_shop_chest(true)
 		current_room.set_room_label(exit_text)
 
 
@@ -2389,6 +2443,7 @@ func _on_stage_exit_requested(room: StageRoom) -> void:
 
 #player death
 func _on_player_death_started() -> void:
+	rest_shop.close_shop()
 	set_run_ui_visible(false)
 	close_developer_weapon_screen()
 	enemy_container.process_mode = Node.PROCESS_MODE_DISABLED
@@ -2403,6 +2458,7 @@ func _on_player_died() -> void:
 
 
 func show_death_screen() -> void:
+	rest_shop.close_shop()
 	run_background.hide()
 	set_run_ui_visible(false)
 	death_screen.visible = true

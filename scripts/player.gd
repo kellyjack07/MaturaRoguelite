@@ -27,6 +27,9 @@ enum ActionState {
 @export var hit_flash_duration: float = 0.25
 @export var hit_flash_color: Color = Color(1.2, 0.9, 0.9, 1.0)
 @export var invulnerability_blink_count: int = 2
+@export var hammer_attack_movement_lock_duration: float = 0.15
+@export var spear_attack_forward_distance: float = 6.0
+@export var spear_attack_forward_duration: float = 0.08
 
 @onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var health_component: HealthComponent = $Health
@@ -61,6 +64,9 @@ var current_attack: Resource
 var action_elapsed: float = 0.0
 var current_pulse_index: int = 0
 var hurt_time_left: float = 0.0
+var attack_movement_lock_left: float = 0.0
+var attack_forward_motion_left: float = 0.0
+var attack_forward_motion_direction: Vector2 = Vector2.ZERO
 var special_cooldowns: Dictionary = {}
 var visual_generation: int = 0
 var death_emitted: bool = false
@@ -90,12 +96,19 @@ func _physics_process(delta: float) -> void:
 		handle_attack_input()
 
 	update_action(delta)
+	update_attack_movement(delta)
 
 	# Hurt feedback does not prevent movement or dashing.
 	if action_state == ActionState.DEAD:
 		velocity = Vector2.ZERO
 	elif is_dashing:
 		update_dash(delta)
+	elif attack_movement_lock_left > 0.0:
+		velocity = Vector2.ZERO
+		move_and_slide()
+	elif attack_forward_motion_left > 0.0:
+		velocity = attack_forward_motion_direction * (spear_attack_forward_distance / maxf(spear_attack_forward_duration, 0.001))
+		move_and_slide()
 	else:
 		move_player()
 
@@ -150,6 +163,7 @@ func start_configured_attack(is_special: bool) -> void:
 	action_elapsed = 0.0
 	current_pulse_index = 0
 	update_attack_direction()
+	configure_attack_movement(is_special)
 	sampled_movement_multiplier = get_damage_multiplier()
 	var base_damage: float = effective_special_damage if is_special else effective_basic_damage
 	last_damage_dealt = maxi(roundi(float(base_damage) * sampled_movement_multiplier), 1)
@@ -210,6 +224,24 @@ func finish_current_action() -> void:
 	debug_state_changed.emit()
 
 
+func configure_attack_movement(is_special: bool) -> void:
+	attack_movement_lock_left = 0.0
+	attack_forward_motion_left = 0.0
+	attack_forward_motion_direction = Vector2.ZERO
+	if is_special or equipped_weapon == null:
+		return
+	if equipped_weapon_id == "hammer":
+		attack_movement_lock_left = maxf(hammer_attack_movement_lock_duration, 0.0)
+	elif equipped_weapon_id == "spear":
+		attack_forward_motion_left = maxf(spear_attack_forward_duration, 0.0)
+		attack_forward_motion_direction = attack_direction.normalized()
+
+
+func update_attack_movement(delta: float) -> void:
+	attack_movement_lock_left = maxf(attack_movement_lock_left - delta, 0.0)
+	attack_forward_motion_left = maxf(attack_forward_motion_left - delta, 0.0)
+
+
 func cancel_transient_actions(cancel_dash: bool = true) -> void:
 	visual_generation += 1
 	attack_area.cancel_attack()
@@ -217,6 +249,9 @@ func cancel_transient_actions(cancel_dash: bool = true) -> void:
 	is_attacking = false
 	action_elapsed = 0.0
 	current_pulse_index = 0
+	attack_movement_lock_left = 0.0
+	attack_forward_motion_left = 0.0
+	attack_forward_motion_direction = Vector2.ZERO
 	if action_state != ActionState.DEAD:
 		action_state = ActionState.NORMAL
 	if cancel_dash:

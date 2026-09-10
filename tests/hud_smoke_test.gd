@@ -34,7 +34,12 @@ func run_tests() -> void:
 	check(hud.gold_text.text == "Gold: %d" % main.current_run.gold, "Gold out of sync")
 	main.save_progress()
 	var saved: Dictionary = main.test_saved.duplicate(true)
-	main.show_main_menu()
+	main.open_pause_menu()
+	main.get_node("UI/PauseMenuScreen/Panel/MainMenuButton").pressed.emit()
+	check(main.main_menu_screen.visible and not paused and not main.run_active, "Pause Main Menu failed")
+	check(main.build_run_snapshot().get("has_saved_run", false), "Returning to menu lost saved run")
+	main.save_progress()
+	check(main.test_saved.get("has_saved_run", false), "Saving in menu erased resumable run")
 	main.current_run = saved
 	main.continue_saved_run()
 	await process_frame
@@ -103,6 +108,12 @@ func run_tests() -> void:
 	main.show_main_menu()
 	check(not hud.visible, "HUD remained visible in main menu")
 	check(not main.run_background.visible, "Atmosphere remained visible in main menu")
+	main.run_active = false
+	main.clear_saved_run_snapshot()
+	main.show_death_screen()
+	main.get_node("UI/DeathScreen/MainMenuButton").pressed.emit()
+	check(main.main_menu_screen.visible and not paused and not main.death_screen.visible, "Death Main Menu failed")
+	check(not main.has_saved_run(), "Death Main Menu revived dead run")
 	if OS.get_cmdline_user_args().has("--capture"):
 		main.main_menu_screen.hide()
 		main.run_background.show()

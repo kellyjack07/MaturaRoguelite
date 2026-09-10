@@ -11,6 +11,16 @@ func check(value: bool, message: String) -> void:
 		push_error(message)
 
 func run_tests() -> void:
+	for direction in ["east", "west"]:
+		var start_room = load("res://rooms/premade/stage_1/start/%s/start_%s_a.tscn" % [direction, direction]).instantiate()
+		root.add_child(start_room)
+		var directions: Array[String] = [direction]
+		start_room.configure(0, "start", directions)
+		await process_frame
+		check(start_room.get_node("Door/EastDoorBlocker/CollisionShape2D").disabled, "Start door blocked: " + direction)
+		check(str(start_room.get_node("Door/EastDoorTop").animation).ends_with("Open"), "Start animation not opening: " + direction)
+		start_room.queue_free()
+		await process_frame
 	var main = load("res://scenes/main.tscn").instantiate()
 	main.set_script(load("res://tests/door_test_main.gd"))
 	root.add_child(main)

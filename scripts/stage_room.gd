@@ -46,6 +46,36 @@ var connection_directions: Array[String] = []
 var player_in_reward_range: bool = false
 var player_in_stage_exit_range: bool = false
 var door_lock_states: Dictionary = {}
+var rest_chest: AnimatedSprite2D
+
+
+func configure_rest_chest(consumed: bool, prompt: String = "E - Rest Room") -> void:
+	if rest_chest == null:
+		rest_chest = AnimatedSprite2D.new()
+		rest_chest.name = "RestChest"
+		rest_chest.sprite_frames = preload("res://data/ui/rest_chest_frames.tres")
+		rest_chest.process_mode = Node.PROCESS_MODE_ALWAYS
+		rest_chest.position = preload("res://data/ui/rest_shop_layout.tres").chest_offset
+		rest_chest.speed_scale = preload("res://data/ui/rest_shop_layout.tres").animation_fps / 8.0
+		reward_interactable.add_child(rest_chest)
+		rest_chest.animation_finished.connect(func():
+			if rest_chest.animation == &"opening":
+				rest_chest.play("open"))
+	if consumed:
+		hide_reward_interactable()
+	else:
+		show_reward_interactable(prompt)
+	reward_display.hide()
+	set_rest_chest_pose("open" if consumed else "closed")
+
+
+func configure_shop_chest(consumed: bool) -> void:
+	configure_rest_chest(consumed, "E - Shop Room")
+
+
+func set_rest_chest_pose(pose: String) -> void:
+	if rest_chest != null:
+		rest_chest.play(pose)
 
 
 #setup
@@ -67,7 +97,7 @@ func configure(new_room_id: int, new_room_type_name: String, new_connection_dire
 
 func update_room_visuals() -> void:
 	floor_polygon.color = ROOM_COLORS.get(room_type_name, ROOM_COLORS["combat"])
-	room_label.text = room_type_name.capitalize()
+	room_label.text = "Shop Room" if room_type_name == "reward" else room_type_name.capitalize()
 
 
 func update_connection_indicators() -> void:
@@ -156,12 +186,17 @@ func get_direction_door_nodes(direction_name: String) -> Array[Node]:
 	return nodes
 
 
+func is_single_shared_door(door_node: Node) -> bool:
+	# Mirrored leaf-room scenes retain the source door's original direction names.
+	return door_node == door_root and connection_directions.size() == 1 and door_node.find_children("*DoorBlocker", "StaticBody2D", true, false).size() == 1
+
+
 func get_door_blocker_shape(door_node: Node, direction_name: String) -> CollisionShape2D:
 	var named_blocker_shape := get_node_or_null("%s/%sDoorBlocker/CollisionShape2D" % [door_node.get_path(), direction_name]) as CollisionShape2D
 	if named_blocker_shape != null:
 		return named_blocker_shape
 	# A shared Door root must never fall back to another direction's collider.
-	if door_node == door_root:
+	if door_node == door_root and not is_single_shared_door(door_node):
 		return null
 
 	var blocker_nodes: Array[Node] = door_node.find_children("*DoorBlocker", "StaticBody2D", true, false)
@@ -189,7 +224,7 @@ func play_matching_door_animations(door_node: Node, direction_name: String, lock
 				chosen_animation_name = animation_name_string
 				break
 
-		if chosen_animation_name.is_empty() and door_node != door_root:
+		if chosen_animation_name.is_empty() and (door_node != door_root or is_single_shared_door(door_node)):
 			for animation_name in sprite.sprite_frames.get_animation_names():
 				var animation_name_string: String = str(animation_name)
 				if animation_name_string.ends_with(animation_suffix):
