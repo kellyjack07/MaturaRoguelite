@@ -6,6 +6,7 @@ const DEFAULT_ROOM_SCENE := preload("res://rooms/graph_room.tscn")
 const DEFAULT_ENEMY_SCENE := preload("res://enemies/bone_scout_enemy.tscn")
 const TRAINING_DUMMY_2_SCENE := preload("res://enemies/training_dummy_2.tscn")
 const GOBLIN_BARREL_SCENE := preload("res://enemies/goblin_barrel.tscn")
+const ENCOUNTER_CATALOGUE := preload("res://data/encounters/encounter_catalogue.tres")
 const SAVE_FILE_PATH := "user://savegame.cfg"
 const REST_SHOP_SETTINGS = preload("res://data/ui/rest_shop_settings.tres")
 
@@ -40,6 +41,7 @@ enum RoomEventType {
 @export var stage_grid_room_count: int = 7
 @export var room_world_spacing: Vector2 = Vector2(320.0, 224.0)
 @export var enable_dev_weapon_screen_in_release: bool = false
+@export var encounter_catalogue: EncounterCatalogue = ENCOUNTER_CATALOGUE
 
 @onready var player: CharacterBody2D = $Player
 @onready var room_container: Node2D = $RoomContainer
@@ -84,6 +86,7 @@ var current_stage_rooms: Array[Dictionary] = []
 var remaining_room_enemies: int = 0
 var current_room: StageRoom = null
 var current_room_id: int = -1
+var room_entry_direction: Vector2 = Vector2.DOWN
 var start_room_id: int = -1
 var boss_room_id: int = -1
 var stage_transition_active: bool = false
@@ -397,6 +400,18 @@ func ensure_current_run_shape() -> void:
 func ensure_stage_room_shape(room_data: Dictionary) -> Dictionary:
 	if not room_data.has("boss_reward_collected"):
 		room_data["boss_reward_collected"] = false
+	if not room_data.has("encounter_id"):
+		room_data["encounter_id"] = ""
+	if not room_data.has("encounter_kind"):
+		room_data["encounter_kind"] = "none"
+	if not room_data.has("encounter_generated"):
+		room_data["encounter_generated"] = false
+	if not room_data.has("encounter_enemy_records"):
+		room_data["encounter_enemy_records"] = []
+	if not room_data.has("defeated_enemy_ids"):
+		room_data["defeated_enemy_ids"] = []
+	if not room_data.has("encounter_status"):
+		room_data["encounter_status"] = ""
 
 	return room_data
 
@@ -1030,6 +1045,7 @@ func start_stage() -> void:
 		current_stage_rooms = build_stage_graph()
 
 	instantiate_stage_graph()
+	prepare_stage_encounters()
 
 	if spawn_room_id == -1:
 		spawn_room_id = get_start_room_id()
@@ -1118,6 +1134,12 @@ func build_stage_rooms_from_positions(grid_positions: Array[Vector2i]) -> Array[
 			"neighbors": neighbor_ids,
 			"enemies_remaining": 0,
 			"boss_reward_collected": false,
+			"encounter_id": "",
+			"encounter_kind": "none",
+			"encounter_generated": false,
+			"encounter_enemy_records": [],
+			"defeated_enemy_ids": [],
+			"encounter_status": "",
 		})
 
 	return stage_rooms
@@ -1427,9 +1449,13 @@ func assign_room_types(stage_rooms: Array[Dictionary], critical_path_ids: Array[
 	for room_index in stage_rooms.size():
 		stage_rooms[room_index]["room_type"] = RoomType.COMBAT
 		stage_rooms[room_index]["completed"] = false
+		stage_rooms[room_index]["encounter_kind"] = "regular"
+		stage_rooms[room_index]["encounter_id"] = encounter_catalogue.get_encounter_id(current_stage, "regular")
 
 	stage_rooms[get_start_room_id()]["room_type"] = RoomType.START
 	stage_rooms[get_start_room_id()]["completed"] = true
+	stage_rooms[get_start_room_id()]["encounter_kind"] = "none"
+	stage_rooms[get_start_room_id()]["encounter_id"] = ""
 
 	var path_room_ids: Array[int] = []
 	for path_index in range(1, critical_path_ids.size()):
@@ -1440,6 +1466,9 @@ func assign_room_types(stage_rooms: Array[Dictionary], critical_path_ids: Array[
 
 	var stage_boss_room_id: int = path_room_ids.back()
 	stage_rooms[stage_boss_room_id]["room_type"] = RoomType.BOSS
+	var challenge_kind := "major_boss" if get_stage_floor_number() == 3 else "final_challenge"
+	stage_rooms[stage_boss_room_id]["encounter_kind"] = challenge_kind
+	stage_rooms[stage_boss_room_id]["encounter_id"] = encounter_catalogue.get_encounter_id(current_stage, challenge_kind)
 
 	var first_combat_room_id: int = path_room_ids[0]
 	if first_combat_room_id != stage_boss_room_id:
@@ -1499,7 +1528,7 @@ func instantiate_stage_graph() -> void:
 		room_instance.global_position = grid_to_world_position(get_room_grid_position(room_data))
 		room_instance.configure(
 			int(room_data["id"]),
-			get_current_room_type_text_from_value(room_data["room_type"] as RoomType),
+			get_room_display_type_name(room_data),
 			room_data["connections"]
 		)
 		room_instance.room_entered.connect(_on_generated_room_entered)
@@ -1685,6 +1714,10 @@ func _on_generated_room_entered(room: StageRoom) -> void:
 	if current_room == room:
 		sync_room_doors(get_room_data_by_id(room.room_id))
 		return
+	if current_room != null and is_instance_valid(current_room):
+		var room_delta := room.global_position - current_room.global_position
+		if room_delta.length_squared() > 0.01:
+			room_entry_direction = room_delta.normalized()
 	current_room = room
 	current_room_id = room.room_id
 	current_room_number = current_room_id + 1
@@ -1725,6 +1758,7 @@ func handle_room_entry(room_data: Dictionary) -> void:
 			if room_data.get("completed", false):
 				room_node.set_room_label("Combat Clear")
 		RoomType.BOSS:
+			var challenge_name := get_terminal_encounter_name(room_data)
 			if not room_data.get("completed", false) and not room_data.get("initialized", false):
 				room_data["initialized"] = true
 				set_room_data_by_id(room_data)
@@ -1733,15 +1767,15 @@ func handle_room_entry(room_data: Dictionary) -> void:
 				if room_data.get("boss_reward_collected", false):
 					room_node.hide_reward_interactable()
 					room_node.show_stage_exit("Press E\nEnter Portal")
-					room_node.set_room_label("Boss Cleared")
+					room_node.set_room_label(challenge_name + " Cleared")
 				else:
 					room_node.show_reward_interactable("Press E\nOpen Chest")
 					room_node.hide_stage_exit()
-					room_node.set_room_label("Boss Defeated")
+					room_node.set_room_label(challenge_name + " Defeated")
 			else:
 				room_node.hide_reward_interactable()
 				room_node.hide_stage_exit()
-				room_node.set_room_label("Boss Room")
+				room_node.set_room_label(challenge_name + " Room")
 		RoomType.REWARD:
 			room_node.hide_stage_exit()
 			room_node.configure_shop_chest(room_data.get("completed", false))
@@ -1822,6 +1856,126 @@ func show_debuff_room_event() -> void:
 	)
 
 
+func prepare_stage_encounters() -> void:
+	if encounter_catalogue == null:
+		return
+
+	var regular_counts: Dictionary = {}
+	var regular_total := 0
+	for room_data in current_stage_rooms:
+		var room_type: RoomType = room_data["room_type"] as RoomType
+		if room_type != RoomType.COMBAT or room_data.get("completed", false) or room_data.get("encounter_generated", false):
+			continue
+		var room_node := get_room_node(int(room_data["id"]))
+		if room_node == null:
+			continue
+		var count := get_encounter_count_for_generation(room_data, room_node.get_enemy_spawn_positions().size())
+		regular_counts[int(room_data["id"])] = count
+		regular_total += count
+
+	var replay_first_stage := current_stage == 1 and int(meta_progression.get("highest_stage_completed", 0)) >= 1
+	var current_roster := encounter_catalogue.get_regular_roster(current_stage, replay_first_stage)
+	var previous_roster: Array[Dictionary] = []
+	if get_stage_floor_number() > 1:
+		previous_roster = encounter_catalogue.get_regular_roster(current_stage - 1, false)
+	var carryover_left := roundi(float(regular_total) * encounter_catalogue.previous_floor_carryover_fraction) if not previous_roster.is_empty() else 0
+	var previous_entry_index := 0
+
+	for room_data in current_stage_rooms:
+		var room_id := int(room_data["id"])
+		var room_type: RoomType = room_data["room_type"] as RoomType
+		if room_type != RoomType.COMBAT and room_type != RoomType.BOSS:
+			continue
+		if room_data.get("completed", false) or room_data.get("encounter_generated", false):
+			continue
+
+		var room_node := get_room_node(room_id)
+		if room_node == null:
+			continue
+		if room_type == RoomType.BOSS and str(room_data.get("encounter_kind", "")) not in ["major_boss", "final_challenge"]:
+			var restored_kind := "major_boss" if get_stage_floor_number() == 3 else "final_challenge"
+			room_data["encounter_kind"] = restored_kind
+			room_data["encounter_id"] = encounter_catalogue.get_encounter_id(current_stage, restored_kind)
+		elif room_type == RoomType.COMBAT and str(room_data.get("encounter_kind", "")) in ["", "none"]:
+			room_data["encounter_kind"] = "regular"
+			room_data["encounter_id"] = encounter_catalogue.get_encounter_id(current_stage, "regular")
+		set_room_data_by_id(room_data)
+		var max_count := room_node.get_enemy_spawn_positions().size()
+		var count := get_encounter_count_for_generation(room_data, max_count)
+		var entries := get_encounter_entries(room_data)
+		if entries.is_empty():
+			entries = [{"enemy_id": "default_enemy", "implemented": true, "scene": enemy_scene}]
+		var records: Array[Dictionary] = []
+		var pending_ids: Array[String] = []
+		for enemy_index in count:
+			var entry: Dictionary = entries[enemy_index % entries.size()].duplicate(true)
+			if room_type == RoomType.COMBAT and carryover_left > 0 and not previous_roster.is_empty():
+				entry = previous_roster[previous_entry_index % previous_roster.size()].duplicate(true)
+				previous_entry_index += 1
+				carryover_left -= 1
+			var implemented := bool(entry.get("implemented", false))
+			var enemy_id := str(entry.get("enemy_id", "unknown_enemy"))
+			if not implemented and not pending_ids.has(enemy_id):
+				pending_ids.append(enemy_id)
+			var scene_path := ""
+			var entry_scene := entry.get("scene") as PackedScene
+			if entry_scene != null:
+				scene_path = entry_scene.resource_path
+			records.append({
+				"instance_id": "%s_enemy_%d" % [room_id, enemy_index],
+				"enemy_id": enemy_id,
+				"scene_path": scene_path,
+				"implemented": implemented,
+				"defeated": false,
+			})
+
+		room_data["encounter_enemy_records"] = records
+		room_data["defeated_enemy_ids"] = []
+		room_data["enemies_remaining"] = records.size()
+		room_data["encounter_generated"] = true
+		if not pending_ids.is_empty():
+			room_data["encounter_status"] = "Pending (not implemented): %s. Using explicit MVP fallback." % ", ".join(pending_ids)
+		else:
+			room_data["encounter_status"] = ""
+		set_room_data_by_id(room_data)
+
+	if run_active:
+		save_progress()
+
+
+func get_encounter_count_for_generation(room_data: Dictionary, max_spawn_count: int) -> int:
+	if max_spawn_count <= 0:
+		return 0
+	if room_data.has("resume_enemy_count"):
+		return mini(int(room_data["resume_enemy_count"]), max_spawn_count)
+	if int(room_data.get("enemies_remaining", 0)) > 0:
+		return mini(int(room_data["enemies_remaining"]), max_spawn_count)
+	if str(room_data.get("encounter_kind", "")) == "major_boss":
+		var boss_support := encounter_catalogue.get_boss_support_policy(current_stage)
+		if not boss_support.is_empty():
+			return mini(int(boss_support.get("initial_count", 0)) + 1, max_spawn_count)
+	return get_enemy_count_for_room(int(room_data["id"]), max_spawn_count)
+
+
+func get_encounter_entries(room_data: Dictionary) -> Array[Dictionary]:
+	var kind := str(room_data.get("encounter_kind", "regular"))
+	if kind == "major_boss":
+		return encounter_catalogue.get_boss_roster(current_stage)
+	if kind == "final_challenge":
+		return encounter_catalogue.get_final_roster(current_stage)
+	var replay_first_stage := current_stage == 1 and int(meta_progression.get("highest_stage_completed", 0)) >= 1
+	return encounter_catalogue.get_regular_roster(current_stage, replay_first_stage)
+
+
+func resolve_encounter_scene(record: Dictionary) -> PackedScene:
+	var scene_path := str(record.get("scene_path", ""))
+	if not scene_path.is_empty():
+		var loaded_scene := load(scene_path) as PackedScene
+		if loaded_scene != null:
+			return loaded_scene
+	return enemy_scene
+
+
 func spawn_room_enemies(room_id: int) -> void:
 	var room_node: StageRoom = get_room_node(room_id)
 	if room_node == null:
@@ -1835,26 +1989,157 @@ func spawn_room_enemies(room_id: int) -> void:
 		if int(existing_enemy.get_meta("room_id", -1)) == room_id and not existing_enemy.is_queued_for_deletion():
 			return
 	var enemy_spawn_positions: Array[Vector2] = room_node.get_enemy_spawn_positions()
-	var enemy_count: int = get_enemy_count_for_room(room_id, enemy_spawn_positions.size())
-	if room_data.has("resume_enemy_count"):
-		enemy_count = mini(int(room_data["resume_enemy_count"]), enemy_spawn_positions.size())
-		room_data.erase("resume_enemy_count")
+	var records: Array = room_data.get("encounter_enemy_records", [])
+	if records.is_empty() or not room_data.get("encounter_generated", false):
+		prepare_stage_encounters()
+		room_data = get_room_data_by_id(room_id)
+		records = room_data.get("encounter_enemy_records", [])
+	var alive_records: Array[Dictionary] = []
+	for record: Variant in records:
+		if record is Dictionary and not bool(record.get("defeated", false)):
+			alive_records.append(record)
+	var enemy_count: int = mini(alive_records.size(), enemy_spawn_positions.size())
 	room_data["enemies_remaining"] = enemy_count
+	room_data.erase("resume_enemy_count")
 	set_room_data_by_id(room_data)
 
 	if enemy_count == 0:
 		on_combat_room_cleared(room_id)
 		return
+	var encounter_status := str(room_data.get("encounter_status", ""))
+	if not encounter_status.is_empty():
+		var pending_label := "Pending Final Challenge"
+		if str(room_data.get("encounter_kind", "")) == "major_boss":
+			pending_label = "Pending Major Boss"
+		room_node.set_room_label(pending_label)
 
-	var room_enemy_scene: PackedScene = get_enemy_scene_for_room(room_data)
 	for enemy_index in enemy_count:
-		var enemy = room_enemy_scene.instantiate()
+		var record: Dictionary = alive_records[enemy_index]
+		var enemy_scene_for_record := resolve_encounter_scene(record)
+		var enemy = enemy_scene_for_record.instantiate()
 		enemy_container.add_child(enemy)
-		enemy.global_position = enemy_spawn_positions[enemy_index]
+		if str(record.get("enemy_id", "")) == "sorcerer":
+			enemy.global_position = get_sorcerer_spawn_position(room_node)
+		else:
+			enemy.global_position = enemy_spawn_positions[enemy_index]
 		enemy.set_meta("room_id", room_id)
+		enemy.set_meta("encounter_enemy_id", str(record.get("instance_id", "")))
+		enemy.set_meta("catalogue_enemy_id", str(record.get("enemy_id", "")))
 
 		var enemy_health: HealthComponent = enemy.get_node("Health")
-		enemy_health.died.connect(_on_room_enemy_died.bind(room_id))
+		enemy_health.died.connect(_on_room_enemy_died.bind(room_id, str(record.get("instance_id", ""))))
+		if enemy.has_signal("summon_wave_requested"):
+			if enemy.has_method("restore_summon_progress"):
+				enemy.restore_summon_progress(get_completed_sorcerer_waves(room_data, str(record.get("instance_id", ""))))
+			enemy.summon_wave_requested.connect(
+				_on_sorcerer_summon_wave_requested.bind(room_id, str(record.get("instance_id", "")))
+			)
+
+
+func _on_sorcerer_summon_wave_requested(wave_number: int, room_id: int, sorcerer_id: String) -> void:
+	var room_data: Dictionary = get_room_data_by_id(room_id)
+	if room_data.is_empty() or room_data.get("completed", false):
+		return
+	var policy := encounter_catalogue.get_boss_support_policy(current_stage)
+	if policy.is_empty() or wave_number < 1 or wave_number > int(policy.get("sorcerer_wave_count", 0)):
+		return
+	var goblin_enemy_id := str(policy.get("goblin_enemy_id", ""))
+	var goblin_count := int(policy.get("goblin_count", 0))
+	var goblin_scene := policy.get("goblin_scene") as PackedScene
+	if not goblin_enemy_id.is_empty() and goblin_count > 0 and goblin_scene != null:
+		spawn_summoned_enemies(room_id, sorcerer_id, wave_number, goblin_enemy_id, goblin_count, goblin_scene)
+
+
+func spawn_summoned_enemies(
+	room_id: int,
+	summoner_id: String,
+	wave_number: int,
+	enemy_id: String,
+	spawn_count: int,
+	scene: PackedScene
+) -> void:
+	var room_data: Dictionary = get_room_data_by_id(room_id)
+	var room_node: StageRoom = get_room_node(room_id)
+	if room_data.is_empty() or room_node == null or scene == null or spawn_count <= 0:
+		return
+	var spawn_positions := room_node.get_enemy_spawn_positions()
+	if spawn_positions.is_empty():
+		return
+	var records: Array = room_data.get("encounter_enemy_records", [])
+	var existing_wave_prefix := "%s_wave_%d_%s_" % [summoner_id, wave_number, enemy_id]
+	for record: Variant in records:
+		if record is Dictionary and str(record.get("instance_id", "")).begins_with(existing_wave_prefix):
+			return
+	var first_new_record_index := records.size()
+	for summon_index in spawn_count:
+		var instance_id := "%s%d" % [existing_wave_prefix, summon_index]
+		records.append({
+			"instance_id": instance_id,
+			"enemy_id": enemy_id,
+			"scene_path": scene.resource_path,
+			"implemented": true,
+			"defeated": false,
+			"summoned_by": summoner_id,
+			"summon_wave": wave_number,
+		})
+	room_data["encounter_enemy_records"] = records
+	room_data["enemies_remaining"] = int(room_data.get("enemies_remaining", 0)) + spawn_count
+	set_room_data_by_id(room_data)
+	if run_active:
+		save_progress()
+
+	for summon_offset in spawn_count:
+		var summon_record: Dictionary = records[first_new_record_index + summon_offset]
+		var summoned_enemy := scene.instantiate()
+		enemy_container.add_child(summoned_enemy)
+		var base_position := spawn_positions[summon_offset % spawn_positions.size()]
+		var offset := Vector2(-10.0 if summon_offset % 2 == 0 else 10.0, -8.0)
+		summoned_enemy.global_position = base_position + offset
+		summoned_enemy.set_meta("room_id", room_id)
+		summoned_enemy.set_meta("encounter_enemy_id", str(summon_record["instance_id"]))
+		summoned_enemy.set_meta("catalogue_enemy_id", enemy_id)
+		var enemy_health: HealthComponent = summoned_enemy.get_node("Health")
+		enemy_health.died.connect(_on_room_enemy_died.bind(room_id, str(summon_record["instance_id"])))
+
+
+func get_completed_sorcerer_waves(room_data: Dictionary, sorcerer_id: String) -> int:
+	var policy := encounter_catalogue.get_boss_support_policy(current_stage)
+	var goblin_enemy_id := str(policy.get("goblin_enemy_id", ""))
+	var total_waves := int(policy.get("sorcerer_wave_count", 0))
+	var completed_waves := 0
+	for wave_number in range(1, total_waves + 1):
+		var wave_records: Array[Dictionary] = []
+		for record: Variant in room_data.get("encounter_enemy_records", []):
+			if not record is Dictionary:
+				continue
+			if str(record.get("summoned_by", "")) != sorcerer_id:
+				continue
+			if int(record.get("summon_wave", 0)) != wave_number:
+				continue
+			if str(record.get("enemy_id", "")) != goblin_enemy_id:
+				continue
+			wave_records.append(record)
+		if wave_records.is_empty():
+			break
+		var wave_cleared := true
+		for record in wave_records:
+			if not bool(record.get("defeated", false)):
+				wave_cleared = false
+				break
+		if not wave_cleared:
+			break
+		completed_waves = wave_number
+	return completed_waves
+
+
+func get_sorcerer_spawn_position(room_node: StageRoom) -> Vector2:
+	var far_side_direction := room_entry_direction
+	if far_side_direction.length_squared() <= 0.01:
+		far_side_direction = Vector2.DOWN
+	var far_side_position := -far_side_direction.normalized() * 72.0
+	far_side_position.x = clampf(far_side_position.x, -78.0, 78.0)
+	far_side_position.y = clampf(far_side_position.y, -50.0, 50.0)
+	return room_node.to_global(far_side_position)
 
 
 func get_enemy_count_for_room(room_id: int, max_spawn_count: int) -> int:
@@ -1882,25 +2167,18 @@ func get_enemy_count_for_room(room_id: int, max_spawn_count: int) -> int:
 
 
 func get_enemy_scene_for_room(room_data: Dictionary) -> PackedScene:
-	var room_type: RoomType = room_data["room_type"] as RoomType
-	if room_type != RoomType.COMBAT:
+	var entries := get_encounter_entries(room_data)
+	if entries.is_empty():
 		return enemy_scene
+	var first_entry: Dictionary = entries[0]
+	var scene := first_entry.get("scene") as PackedScene
+	return scene if scene != null else enemy_scene
 
-	var stage_world: int = get_stage_world_number()
-	var stage_floor: int = get_stage_floor_number()
-	var highest_stage_completed: int = int(meta_progression.get("highest_stage_completed", 0))
-	var has_cleared_stage_1_1_before: bool = highest_stage_completed >= 1
 
-	if stage_world == 1 and stage_floor == 1 and not has_cleared_stage_1_1_before:
-		return TRAINING_DUMMY_2_SCENE
-
-	if stage_world == 1 and stage_floor >= 2 and stage_floor <= 3:
-		return GOBLIN_BARREL_SCENE
-
-	if stage_world == 1 and stage_floor == 1 and has_cleared_stage_1_1_before:
-		return GOBLIN_BARREL_SCENE
-
-	return enemy_scene
+func get_terminal_encounter_name(room_data: Dictionary) -> String:
+	if str(room_data.get("encounter_kind", "")) == "final_challenge":
+		return "Final Challenge"
+	return "Boss"
 
 
 func get_room_node(room_id: int) -> StageRoom:
@@ -1967,6 +2245,12 @@ func get_current_room_type_text_from_value(room_type: RoomType) -> String:
 			return "debuff"
 		_:
 			return "combat"
+
+
+func get_room_display_type_name(room_data: Dictionary) -> String:
+	if room_data["room_type"] as RoomType == RoomType.BOSS and str(room_data.get("encounter_kind", "")) == "final_challenge":
+		return "final_challenge"
+	return get_current_room_type_text_from_value(room_data["room_type"] as RoomType)
 
 
 func get_stage_map_text() -> String:
@@ -2103,6 +2387,8 @@ func reveal_connected_rooms(room_id: int) -> void:
 
 
 func start_stage_transition() -> void:
+	if stage_transition_active:
+		return
 	rest_shop.close_shop()
 	meta_progression["highest_stage_completed"] = max(int(meta_progression.get("highest_stage_completed", 0)), current_stage)
 	if skill_tree != null:
@@ -2137,16 +2423,68 @@ func finish_stage_transition() -> void:
 	start_stage()
 
 
-func _on_room_enemy_died(room_id: int) -> void:
+func _on_room_enemy_died(room_id: int, encounter_enemy_id: String = "") -> void:
 	var room_data: Dictionary = get_room_data_by_id(room_id)
 	if room_data.is_empty():
 		return
+	var defeated_record: Dictionary = {}
+
+	if not encounter_enemy_id.is_empty():
+		var defeated_ids: Array = room_data.get("defeated_enemy_ids", [])
+		if defeated_ids.has(encounter_enemy_id):
+			return
+		defeated_ids.append(encounter_enemy_id)
+		room_data["defeated_enemy_ids"] = defeated_ids
+		var records: Array = room_data.get("encounter_enemy_records", [])
+		for record: Variant in records:
+			if record is Dictionary and str(record.get("instance_id", "")) == encounter_enemy_id:
+				defeated_record = record.duplicate(true)
+				record["defeated"] = true
+		room_data["encounter_enemy_records"] = records
 
 	room_data["enemies_remaining"] = max(int(room_data.get("enemies_remaining", 0)) - 1, 0)
 	set_room_data_by_id(room_data)
+	if run_active:
+		save_progress()
+	if not defeated_record.is_empty() and defeated_record.has("summoned_by"):
+		call_deferred(
+			"_on_sorcerer_summon_group_cleared",
+			room_id,
+			str(defeated_record.get("summoned_by", "")),
+			int(defeated_record.get("summon_wave", 0))
+		)
 
 	if int(room_data["enemies_remaining"]) == 0:
 		on_combat_room_cleared(room_id)
+
+
+func _on_sorcerer_summon_group_cleared(room_id: int, sorcerer_id: String, wave_number: int) -> void:
+	var room_data: Dictionary = get_room_data_by_id(room_id)
+	if room_data.is_empty() or wave_number <= 0 or room_data.get("completed", false):
+		return
+	if get_completed_sorcerer_waves(room_data, sorcerer_id) < wave_number:
+		return
+	var policy := encounter_catalogue.get_boss_support_policy(current_stage)
+	var total_waves := int(policy.get("sorcerer_wave_count", 0))
+	if wave_number >= total_waves:
+		return
+	var support_enemy_id := str(policy.get("enemy_id", ""))
+	var support_count := int(policy.get("after_wave_count", 0))
+	var support_scene := policy.get("scene") as PackedScene
+	if not support_enemy_id.is_empty() and support_count > 0 and support_scene != null:
+		spawn_summoned_enemies(room_id, sorcerer_id, wave_number, support_enemy_id, support_count, support_scene)
+	var sorcerer := get_room_enemy_by_encounter_id(room_id, sorcerer_id)
+	if sorcerer != null and sorcerer.has_method("notify_summon_wave_cleared"):
+		sorcerer.notify_summon_wave_cleared(wave_number)
+
+
+func get_room_enemy_by_encounter_id(room_id: int, encounter_enemy_id: String) -> Node:
+	for enemy in enemy_container.get_children():
+		if int(enemy.get_meta("room_id", -1)) != room_id:
+			continue
+		if str(enemy.get_meta("encounter_enemy_id", "")) == encounter_enemy_id:
+			return enemy
+	return null
 
 
 func on_combat_room_cleared(room_id: int) -> void:
@@ -2161,6 +2499,7 @@ func on_combat_room_cleared(room_id: int) -> void:
 	current_room = get_room_node(room_id)
 	if get_current_room_type() == RoomType.BOSS:
 		var boss_data: Dictionary = get_current_room_data()
+		var challenge_name := get_terminal_encounter_name(boss_data)
 		boss_data["completed"] = true
 		boss_data["enemies_remaining"] = 0
 		set_room_data_by_id(boss_data)
@@ -2168,7 +2507,7 @@ func on_combat_room_cleared(room_id: int) -> void:
 			current_room.set_connected_doors_locked(false)
 			current_room.show_reward_interactable("Press E\nOpen Chest")
 			current_room.hide_stage_exit()
-			current_room.set_room_label("Boss Defeated")
+			current_room.set_room_label(challenge_name + " Defeated")
 		update_stage_room_visuals()
 		update_debug_ui()
 		return
@@ -2333,11 +2672,12 @@ func _on_reward_interaction_requested(room: StageRoom) -> void:
 		return
 	if get_current_room_type() == RoomType.BOSS:
 		var boss_room_data: Dictionary = get_current_room_data()
+		var challenge_name := get_terminal_encounter_name(boss_room_data)
 		if boss_room_data.get("completed", false) and not boss_room_data.get("boss_reward_collected", false):
 			current_room.hide_reward_interactable()
 			show_room_event(
-				"Boss Chest",
-				"Boss reward:\n+%s Gold" % str(combat_clear_gold_reward),
+				challenge_name + " Chest",
+				challenge_name + " reward:\n+%s Gold" % str(combat_clear_gold_reward),
 				"Open Chest",
 				RoomEventType.BOSS_CHEST_REWARD
 			)
@@ -2412,7 +2752,7 @@ func _on_boss_chest_reward_collected() -> void:
 	if current_room != null:
 		current_room.hide_reward_interactable()
 		current_room.show_stage_exit("Press E\nEnter Portal")
-		current_room.set_room_label("Boss Cleared")
+		current_room.set_room_label(get_terminal_encounter_name(room_data) + " Cleared")
 
 	update_stage_room_visuals()
 	update_debug_ui()

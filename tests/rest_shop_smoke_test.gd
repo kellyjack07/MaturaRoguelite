@@ -23,6 +23,11 @@ func run_tests() -> void:
 			break
 	var id: int = room_data.id
 	var room = main.get_room_node(id)
+	room.reward_interactable.hide()
+	room.configure_rest_chest(false)
+	check(room.rest_chest.is_visible_in_tree(), "Chest hidden by premade room parent")
+	check(room.rest_chest.z_index == 6, "Chest not above room tiles")
+	check(room.rest_chest.position == room.reward_interactable_shape.position + preload("res://data/ui/rest_shop_layout.tres").chest_offset, "Chest not aligned with interaction area")
 	main.health_component.current_health = 1
 	main.health_component.max_health = 26
 	room_data.initialized = true
@@ -30,6 +35,8 @@ func run_tests() -> void:
 	check(main.health_component.current_health == 1, "Rest entry healed automatically")
 	main._on_reward_interaction_requested(room)
 	check(main.rest_shop.visible and paused, "Shop did not pause")
+	await create_timer(0.8).timeout
+	check(room.rest_chest.animation == &"open", "Chest opening did not finish while paused")
 	check(main.get_rest_shop_offer(id, "small").heal == 6, "Small rounding incorrect")
 	check(main.get_rest_shop_offer(id, "big").heal == 13, "Big healing incorrect")
 	main.current_run.gold = 0
@@ -69,7 +76,7 @@ func run_tests() -> void:
 	main.health_component.current_health -= 1
 	check(main.get_rest_shop_offer(id, "big").heal == 1, "Healing exceeds missing HP")
 	main.meta_progression.gear.rest_bonus = 2
-	main.current_run.debuff_state.rest_penalty = 100
+	main.current_run.debuff_state.rest_penalty = main.health_component.max_health + 100
 	check(not main.get_rest_shop_offer(id, "small").available, "Zero healing consumed reward")
 	main.current_run.debuff_state.rest_penalty = 1
 	main.health_component.current_health = 1

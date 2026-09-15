@@ -5,6 +5,7 @@ class_name BaseEnemy
 @export var stop_distance: float = 14.0
 @export var hit_knockback_speed: float = 120.0
 @export var hit_stun_duration: float = 0.3
+@export var receives_knockback: bool = true
 @export var invulnerability_blink_alpha: float = 0.35
 @export var invulnerability_blink_count: int = 3
 
@@ -112,6 +113,10 @@ func play_animation_if_exists(animation_name: StringName) -> bool:
 
 
 func apply_hit_reaction(from_position: Vector2, damage: int) -> void:
+	if not receives_knockback:
+		play_invulnerability_visual()
+		on_hit_received()
+		return
 	var knockback_direction: Vector2 = from_position.direction_to(global_position).normalized()
 	knockback_velocity = knockback_direction * hit_knockback_speed * (float(damage) / 8.0)
 	hit_stun_timer = hit_stun_duration

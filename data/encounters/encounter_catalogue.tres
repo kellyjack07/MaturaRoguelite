@@ -1,0 +1,290 @@
+[gd_resource type="Resource" script_class="EncounterCatalogue" format=3 uid="uid://d4l5xudxt48hf"]
+
+[ext_resource type="Script" uid="uid://n32xd48bni2w" path="res://scripts/encounters/encounter_catalogue.gd" id="1_catalogue"]
+[ext_resource type="PackedScene" uid="uid://c7qln75v30u14" path="res://enemies/training_dummy_2.tscn" id="2_dummy"]
+[ext_resource type="PackedScene" uid="uid://bg3vo1c6kpt4u" path="res://enemies/goblin_barrel.tscn" id="3_barrel"]
+[ext_resource type="PackedScene" uid="uid://hepg7d2poc77" path="res://enemies/monster_slasher.tscn" id="5_monster_slasher"]
+[ext_resource type="PackedScene" uid="uid://c4klcrloaa2qv" path="res://enemies/sorcerer.tscn" id="6_sorcerer"]
+
+[resource]
+script = ExtResource("1_catalogue")
+stage_settings = {
+"1": {
+"boss_roster": [{
+"enemy_id": "sorcerer",
+"implemented": true,
+"scene": ExtResource("6_sorcerer")
+}, {
+"enemy_id": "monster_slasher",
+"implemented": true,
+"scene": ExtResource("5_monster_slasher")
+}, {
+"enemy_id": "monster_slasher",
+"implemented": true,
+"scene": ExtResource("5_monster_slasher")
+}],
+"boss_support": {
+"after_wave_count": 2,
+"enemy_id": "monster_slasher",
+"goblin_count": 3,
+"goblin_enemy_id": "goblin_barrel",
+"goblin_scene": ExtResource("3_barrel"),
+"initial_count": 2,
+"scene": ExtResource("5_monster_slasher"),
+"sorcerer_wave_count": 3
+},
+"final_challenge_encounter_id": "stage_1_final_challenge",
+"final_roster": [{
+"enemy_id": "training_dummy_2",
+"implemented": true,
+"scene": ExtResource("2_dummy")
+}],
+"major_boss_encounter_id": "sorcerer_monster_slasher",
+"regular_roster": [{
+"enemy_id": "training_dummy_2",
+"implemented": true,
+"scene": ExtResource("2_dummy")
+}],
+"replay_regular_roster": [{
+"enemy_id": "training_dummy_2",
+"implemented": true,
+"scene": ExtResource("2_dummy")
+}, {
+"enemy_id": "goblin_barrel",
+"implemented": true,
+"scene": ExtResource("3_barrel")
+}]
+},
+"2": {
+"boss_roster": [{
+"enemy_id": "sorcerer",
+"implemented": true,
+"scene": ExtResource("6_sorcerer")
+}, {
+"enemy_id": "monster_slasher",
+"implemented": true,
+"scene": ExtResource("5_monster_slasher")
+}, {
+"enemy_id": "monster_slasher",
+"implemented": true,
+"scene": ExtResource("5_monster_slasher")
+}],
+"boss_support": {
+"after_wave_count": 2,
+"enemy_id": "monster_slasher",
+"goblin_count": 3,
+"goblin_enemy_id": "goblin_barrel",
+"goblin_scene": ExtResource("3_barrel"),
+"initial_count": 2,
+"scene": ExtResource("5_monster_slasher"),
+"sorcerer_wave_count": 3
+},
+"final_challenge_encounter_id": "stage_2_final_challenge",
+"final_roster": [{
+"enemy_id": "green_goblin",
+"implemented": false
+}, {
+"enemy_id": "green_orc_archer",
+"implemented": false
+}],
+"major_boss_encounter_id": "sorcerer_monster_slasher",
+"regular_roster": [{
+"enemy_id": "green_goblin",
+"implemented": false
+}, {
+"enemy_id": "green_orc_archer",
+"implemented": false
+}]
+},
+"3": {
+"boss_roster": [{
+"enemy_id": "sorcerer",
+"implemented": true,
+"scene": ExtResource("6_sorcerer")
+}, {
+"enemy_id": "monster_slasher",
+"implemented": true,
+"scene": ExtResource("5_monster_slasher")
+}, {
+"enemy_id": "monster_slasher",
+"implemented": true,
+"scene": ExtResource("5_monster_slasher")
+}],
+"boss_support": {
+"after_wave_count": 2,
+"enemy_id": "monster_slasher",
+"goblin_count": 3,
+"goblin_enemy_id": "goblin_barrel",
+"goblin_scene": ExtResource("3_barrel"),
+"initial_count": 2,
+"scene": ExtResource("5_monster_slasher"),
+"sorcerer_wave_count": 3
+},
+"final_challenge_encounter_id": "stage_3_final_challenge",
+"final_roster": [{
+"enemy_id": "orc_barbare",
+"implemented": false
+}, {
+"enemy_id": "orc_archer",
+"implemented": false
+}],
+"major_boss_encounter_id": "sorcerer_monster_slasher",
+"regular_roster": [{
+"enemy_id": "orc_barbare",
+"implemented": false
+}, {
+"enemy_id": "orc_archer",
+"implemented": false
+}, {
+"enemy_id": "strong_goblin",
+"implemented": false
+}, {
+"enemy_id": "strong_orc",
+"implemented": false
+}]
+},
+"4": {
+"boss_roster": [{
+"enemy_id": "frog_boss",
+"implemented": false
+}],
+"final_challenge_encounter_id": "stage_4_final_challenge",
+"final_roster": [{
+"enemy_id": "frog_monster",
+"implemented": false
+}, {
+"enemy_id": "mushroom",
+"implemented": false
+}],
+"major_boss_encounter_id": "frog_boss",
+"regular_roster": [{
+"enemy_id": "frog_monster",
+"implemented": false
+}, {
+"enemy_id": "mushroom",
+"implemented": false
+}]
+},
+"5": {
+"boss_roster": [{
+"enemy_id": "frog_boss",
+"implemented": false
+}],
+"final_challenge_encounter_id": "stage_5_final_challenge",
+"final_roster": [{
+"enemy_id": "ent",
+"implemented": false
+}, {
+"enemy_id": "mushroom",
+"implemented": false
+}],
+"major_boss_encounter_id": "frog_boss",
+"regular_roster": [{
+"enemy_id": "ent",
+"implemented": false
+}, {
+"enemy_id": "mushroom",
+"implemented": false
+}]
+},
+"6": {
+"boss_roster": [{
+"enemy_id": "frog_boss",
+"implemented": false
+}],
+"final_challenge_encounter_id": "stage_6_final_challenge",
+"final_roster": [{
+"enemy_id": "ent",
+"implemented": false
+}, {
+"enemy_id": "cyclop_archer",
+"implemented": false
+}],
+"major_boss_encounter_id": "frog_boss",
+"regular_roster": [{
+"enemy_id": "ent",
+"implemented": false
+}, {
+"enemy_id": "frog_monster",
+"implemented": false
+}, {
+"enemy_id": "mushroom",
+"implemented": false
+}, {
+"enemy_id": "cyclop_archer",
+"implemented": false
+}]
+},
+"7": {
+"boss_roster": [{
+"enemy_id": "game_master",
+"implemented": false
+}],
+"final_challenge_encounter_id": "stage_7_final_challenge",
+"final_roster": [{
+"enemy_id": "dwarfette",
+"implemented": false
+}, {
+"enemy_id": "monsterfly",
+"implemented": false
+}],
+"major_boss_encounter_id": "game_master",
+"regular_roster": [{
+"enemy_id": "dwarfette",
+"implemented": false
+}, {
+"enemy_id": "monsterfly",
+"implemented": false
+}]
+},
+"8": {
+"boss_roster": [{
+"enemy_id": "game_master",
+"implemented": false
+}],
+"final_challenge_encounter_id": "stage_8_final_challenge",
+"final_roster": [{
+"enemy_id": "rhino_monster",
+"implemented": false
+}, {
+"enemy_id": "vampire_archer",
+"implemented": false
+}],
+"major_boss_encounter_id": "game_master",
+"regular_roster": [{
+"enemy_id": "rhino_monster",
+"implemented": false
+}, {
+"enemy_id": "vampire_archer",
+"implemented": false
+}]
+},
+"9": {
+"boss_roster": [{
+"enemy_id": "game_master",
+"implemented": false
+}],
+"final_challenge_encounter_id": "stage_9_final_challenge",
+"final_roster": [{
+"enemy_id": "rhino_monster",
+"implemented": false
+}, {
+"enemy_id": "dwarfette",
+"implemented": false
+}, {
+"enemy_id": "vampire_archer",
+"implemented": false
+}],
+"major_boss_encounter_id": "game_master",
+"regular_roster": [{
+"enemy_id": "rhino_monster",
+"implemented": false
+}, {
+"enemy_id": "dwarfette",
+"implemented": false
+}, {
+"enemy_id": "vampire_archer",
+"implemented": false
+}]
+}
+}

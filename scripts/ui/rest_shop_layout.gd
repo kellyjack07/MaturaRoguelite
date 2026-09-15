@@ -5,3 +5,4 @@ extends Resource
 @export var potion_scale: float = 2.0
 @export var animation_fps: float = 8.0
 @export var chest_offset: Vector2 = Vector2.ZERO
+@export var chest_z_index: int = 6

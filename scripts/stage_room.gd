@@ -11,6 +11,7 @@ const ROOM_COLORS := {
 	"start": Color(0.19, 0.25, 0.36, 1.0),
 	"combat": Color(0.32, 0.18, 0.18, 1.0),
 	"boss": Color(0.43, 0.12, 0.12, 1.0),
+	"final_challenge": Color(0.38, 0.20, 0.14, 1.0),
 	"reward": Color(0.36, 0.29, 0.14, 1.0),
 	"rest": Color(0.16, 0.31, 0.23, 1.0),
 	"debuff": Color(0.30, 0.15, 0.32, 1.0),
@@ -50,12 +51,15 @@ var rest_chest: AnimatedSprite2D
 
 
 func configure_rest_chest(consumed: bool, prompt: String = "E - Rest Room") -> void:
+	# Premade combat layouts may hide this parent until a chest is configured.
+	reward_interactable.show()
 	if rest_chest == null:
 		rest_chest = AnimatedSprite2D.new()
 		rest_chest.name = "RestChest"
 		rest_chest.sprite_frames = preload("res://data/ui/rest_chest_frames.tres")
 		rest_chest.process_mode = Node.PROCESS_MODE_ALWAYS
-		rest_chest.position = preload("res://data/ui/rest_shop_layout.tres").chest_offset
+		rest_chest.position = reward_interactable_shape.position + preload("res://data/ui/rest_shop_layout.tres").chest_offset
+		rest_chest.z_index = preload("res://data/ui/rest_shop_layout.tres").chest_z_index
 		rest_chest.speed_scale = preload("res://data/ui/rest_shop_layout.tres").animation_fps / 8.0
 		reward_interactable.add_child(rest_chest)
 		rest_chest.animation_finished.connect(func():
@@ -97,7 +101,7 @@ func configure(new_room_id: int, new_room_type_name: String, new_connection_dire
 
 func update_room_visuals() -> void:
 	floor_polygon.color = ROOM_COLORS.get(room_type_name, ROOM_COLORS["combat"])
-	room_label.text = "Shop Room" if room_type_name == "reward" else room_type_name.capitalize()
+	room_label.text = "Shop Room" if room_type_name == "reward" else room_type_name.replace("_", " ").capitalize()
 
 
 func update_connection_indicators() -> void:
