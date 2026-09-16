@@ -5,6 +5,10 @@ const PANEL = preload("res://assets/UI/Tiny Dungeons - UI Pack/components/compon
 const TITLE = preload("res://assets/UI/Tiny Dungeons - UI Pack/components/component_3slices_window_title.png")
 const SMALL = preload("res://assets/items/Pixel Potion Pack - FINISHED/Small Vial/RED/Small Vial - RED - Spritesheet.png")
 const BIG = preload("res://assets/items/Pixel Potion Pack - FINISHED/Round Potion/RED/Round Potion - RED - Spritesheet.png")
+const STAMINA = preload("res://assets/items/Pixel Potion Pack - FINISHED/Small Bottle/BLUE/Sprites/Small Bottle - BLUE - 0000.png")
+var is_shop := false
+var title_label: Label
+var cards: Dictionary = {}
 var main: Node
 var room_id: int = -1
 var previous_pause: bool = false
@@ -37,7 +41,7 @@ func _ready() -> void:
 	center.add_child(column)
 	var title_panel := _panel(TITLE)
 	column.add_child(title_panel)
-	_label(title_panel, "Rest Room")
+	title_label = _label(title_panel, "Rest Room")
 	var panel := _panel(PANEL)
 	column.add_child(panel)
 	var contents := VBoxContainer.new()
@@ -47,8 +51,10 @@ func _ready() -> void:
 	var choices := HBoxContainer.new()
 	choices.add_theme_constant_override("separation", LAYOUT.gap)
 	contents.add_child(choices)
+	_make_offer(choices, "instant", SMALL, Vector2i(14, 24))
 	_make_offer(choices, "small", SMALL, Vector2i(14, 24))
 	_make_offer(choices, "big", BIG, Vector2i(19, 38))
+	_make_offer(choices, "stamina", STAMINA, Vector2i(STAMINA.get_size()))
 	status = _label(contents, "Choose one potion.")
 	close_button = Button.new()
 	close_button.text = "Close"
@@ -71,6 +77,7 @@ func _label(parent: Node, text: String) -> Label:
 	var label := Label.new()
 	label.theme_type_variation = "RestShopText"
 	label.text = text
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	parent.add_child(label)
 	return label
@@ -80,6 +87,7 @@ func _make_offer(parent: Node, id: String, texture: Texture2D, frame_size: Vecto
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_theme_constant_override("separation", LAYOUT.gap)
 	parent.add_child(column)
+	cards[id] = column
 	var preview := Control.new()
 	preview.custom_minimum_size = Vector2(48, 38) * LAYOUT.potion_scale
 	column.add_child(preview)
@@ -98,7 +106,7 @@ func _make_offer(parent: Node, id: String, texture: Texture2D, frame_size: Vecto
 	sprite.play()
 	descriptions[id] = _label(column, "")
 	var button := Button.new()
-	button.text = "Take Small" if id == "small" else "Buy Big"
+	button.text = "Heal Now" if id == "instant" else "Buy"
 	button.pressed.connect(_choose.bind(id))
 	column.add_child(button)
 	buttons[id] = button
@@ -108,35 +116,48 @@ func open_shop(owner_main: Node, id: int) -> void:
 		return
 	main = owner_main
 	room_id = id
+	is_shop = main.get_room_data_by_id(id).get("room_type", -1) == main.RoomType.REWARD
+	title_label.text = "Shop Room" if is_shop else "Rest Room"
+	cards.instant.visible = not is_shop
+	cards.stamina.visible = is_shop
 	previous_pause = get_tree().paused
 	main.player.cancel_actions_for_modal()
 	get_tree().paused = true
 	show()
-	status.text = "Choose one potion."
+	status.text = "One of each potion available." if is_shop else "Choose one: heal now or carry a potion."
 	refresh()
-	if not buttons.small.disabled:
-		buttons.small.grab_focus()
-	elif not buttons.big.disabled:
-		buttons.big.grab_focus()
-	else:
-		close_button.grab_focus()
+	close_button.grab_focus()
+	for key in buttons:
+		if cards[key].visible and not buttons[key].disabled:
+			buttons[key].grab_focus()
+			break
 	main.get_room_node(room_id).set_rest_chest_pose("opening")
 
 func refresh() -> void:
 	info.text = "HP: %d/%d    Gold: %d" % [main.health_component.current_health, main.health_component.max_health, main.current_run.get("gold", 0)]
 	for id in buttons:
-		var offer: Dictionary = main.get_rest_shop_offer(room_id, id)
-		descriptions[id].text = "%s\nHeal %d HP | %s" % ["Small Potion" if id == "small" else "Big Potion", offer.heal, "Free" if offer.cost == 0 else "%d Gold" % offer.cost]
+		if not cards[id].visible:
+			continue
+		var potion_id: String = id + "_healing" if id in ["small", "big"] else id
+		var offer: Dictionary = main.get_shop_potion_offer(room_id, potion_id) if is_shop else main.get_rest_shop_offer(room_id, id)
+		var title := "Instant Heal" if id == "instant" else ("Small Potion" if id == "small" else "Big Potion")
+		var effect := "Heal %d HP now" % offer.get("heal", 0)
+		if id != "instant":
+			var definition = main.POTION_CATALOGUE.get_definition(potion_id)
+			title = "Stamina Potion" if id == "stamina" else title
+			effect = definition.effect_description
+		descriptions[id].text = "%s\n%s\n%s" % [title, effect, "Free" if offer.cost == 0 else "%d Gold" % offer.cost]
 		buttons[id].disabled = not offer.available
 		buttons[id].tooltip_text = offer.reason
 
 func _choose(id: String) -> void:
-	var result: Dictionary = main.select_rest_shop_offer(room_id, id)
-	if result.success:
+	var potion_id: String = id + "_healing" if id in ["small", "big"] else id
+	var result: Dictionary = main.select_shop_potion(room_id, potion_id) if is_shop else main.select_rest_shop_offer(room_id, id)
+	if result.success and not is_shop:
 		close_shop()
 	else:
 		refresh()
-		status.text = result.reason
+		status.text = "Potion added to inventory." if result.success else result.reason
 
 func close_shop() -> void:
 	if not visible:
@@ -146,7 +167,10 @@ func close_shop() -> void:
 	if is_instance_valid(main):
 		var room = main.get_room_node(room_id)
 		if room != null:
-			room.configure_rest_chest(main.get_room_data_by_id(room_id).get("completed", false))
+			if is_shop:
+				main.refresh_shop_chest(room_id)
+			else:
+				room.configure_rest_chest(main.get_room_data_by_id(room_id).get("completed", false))
 	room_id = -1
 
 func _input(event: InputEvent) -> void:

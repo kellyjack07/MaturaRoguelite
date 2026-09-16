@@ -1,6 +1,8 @@
 extends CharacterBody2D
 class_name BaseEnemy
 
+const HEALTH_BAR_SCENE := preload("res://ui/enemy_health_bar.tscn")
+
 @export var move_speed: float = 50.0
 @export var stop_distance: float = 14.0
 @export var hit_knockback_speed: float = 120.0
@@ -8,6 +10,9 @@ class_name BaseEnemy
 @export var receives_knockback: bool = true
 @export var invulnerability_blink_alpha: float = 0.35
 @export var invulnerability_blink_count: int = 3
+@export var health_bar_use_style_offset: bool = true
+@export var health_bar_offset: Vector2 = Vector2.ZERO
+@export var health_bar_width: float = 0.0
 
 @onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var health_component: HealthComponent = $Health
@@ -19,12 +24,33 @@ var hit_stun_timer: float = 0.0
 var knockback_velocity: Vector2 = Vector2.ZERO
 var default_modulate: Color = Color(1.0, 1.0, 1.0, 1.0)
 var invulnerability_visual_active: bool = false
+var health_bar: Control
+var health_presentation_configured := false
 
 
 func _ready() -> void:
 	health_component.died.connect(on_died)
 	default_modulate = animated_sprite.modulate
 	on_enemy_ready()
+	call_deferred("_configure_default_health_presentation")
+
+
+func configure_health_presentation(show_overhead_bar: bool = true) -> void:
+	if health_presentation_configured:
+		return
+	health_presentation_configured = true
+	if not show_overhead_bar or health_component == null:
+		return
+	health_bar = HEALTH_BAR_SCENE.instantiate()
+	add_child(health_bar)
+	var offset_override := Vector2.INF if health_bar_use_style_offset else health_bar_offset
+	health_bar.setup(health_component, offset_override, health_bar_width)
+
+
+func _configure_default_health_presentation() -> void:
+	if health_presentation_configured:
+		return
+	configure_health_presentation(not bool(get_meta("designated_boss", false)))
 
 
 func _physics_process(delta: float) -> void:

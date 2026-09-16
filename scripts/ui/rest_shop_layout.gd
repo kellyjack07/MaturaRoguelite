@@ -1,5 +1,5 @@
 extends Resource
-@export var panel_width: float = 380.0
+@export var panel_width: float = 480.0
 @export var margin: int = 16
 @export var gap: int = 10
 @export var potion_scale: float = 2.0

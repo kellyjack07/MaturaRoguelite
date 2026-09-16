@@ -1,6 +1,15 @@
 @tool
 extends Resource
 
+@export var potion_slot_size: float = 28.0:
+	set(v):
+		potion_slot_size = v
+		emit_changed()
+@export var potion_icon_padding: float = 4.0:
+	set(v):
+		potion_icon_padding = v
+		emit_changed()
+
 @export var margin: float = 10.0:
 	set(v):
 		margin = v
@@ -16,6 +25,18 @@ extends Resource
 @export var weapon_width: float = 210.0:
 	set(v):
 		weapon_width = v
+		emit_changed()
+@export var boss_width: float = 300.0:
+	set(v):
+		boss_width = maxf(v, 80.0)
+		emit_changed()
+@export var boss_gap: float = 6.0:
+	set(v):
+		boss_gap = maxf(v, 0.0)
+		emit_changed()
+@export var boss_top_offset: float = 42.0:
+	set(v):
+		boss_top_offset = maxf(v, 0.0)
 		emit_changed()
 @export var artwork_scale: int = 1:
 	set(v):

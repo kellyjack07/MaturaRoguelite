@@ -6,12 +6,13 @@ class_name HurtboxComponent
 
 @export var invulnerability_duration: float = 0.5
 var is_invulnerable: bool = false
+var is_dash_invulnerable: bool = false
 var enabled: bool = true
 var invulnerability_generation: int = 0
 
 
 func take_hit(damage: int, from_position: Vector2) -> bool:
-	if not enabled or health_component == null or is_invulnerable:
+	if not enabled or health_component == null or is_invulnerable or is_dash_invulnerable:
 		return false
 	if health_component.is_dead():
 		return false
@@ -52,3 +53,8 @@ func set_enabled(value: bool) -> void:
 func reset_state() -> void:
 	set_enabled(true)
 	is_invulnerable = false
+	is_dash_invulnerable = false
+
+
+func set_dash_immunity(value: bool) -> void:
+	is_dash_invulnerable = value

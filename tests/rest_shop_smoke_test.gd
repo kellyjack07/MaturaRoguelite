@@ -57,7 +57,7 @@ func run_tests() -> void:
 	check(main.current_run.gold == 10 and main.health_component.current_health == 1 and not room_data.completed, "Failed save did not roll back")
 	main.fail_test_save = false
 	main.rest_shop._choose("big")
-	check(main.current_run.gold == 5 and main.health_component.current_health == 14, "Big selection values incorrect")
+	check(main.current_run.gold == 5 and main.health_component.current_health == 1 and main.potion_inventory.has("big_healing"), "Big potion was not stored without instant healing")
 	check(room_data.completed and room.rest_chest.animation == &"open", "Consumed chest not open")
 	check(not main.select_rest_shop_offer(id, "small").success, "Repeated selection succeeded")
 	var snapshot: Dictionary = main.test_saved.duplicate(true)
@@ -72,15 +72,16 @@ func run_tests() -> void:
 	room_data.completed = false
 	room.configure_rest_chest(false)
 	main.health_component.current_health = main.health_component.max_health
-	check(not main.get_rest_shop_offer(id, "small").available, "Full-health potion allowed")
+	check(not main.get_rest_shop_offer(id, "instant").available, "Full-health instant heal allowed")
+	check(main.get_rest_shop_offer(id, "small").available, "Full-health carried potion purchase blocked")
 	main.health_component.current_health -= 1
-	check(main.get_rest_shop_offer(id, "big").heal == 1, "Healing exceeds missing HP")
+	check(main.get_rest_shop_offer(id, "instant").heal == 1, "Instant healing exceeds missing HP")
 	main.meta_progression.gear.rest_bonus = 2
 	main.current_run.debuff_state.rest_penalty = main.health_component.max_health + 100
-	check(not main.get_rest_shop_offer(id, "small").available, "Zero healing consumed reward")
+	check(not main.get_rest_shop_offer(id, "instant").available, "Zero healing consumed reward")
 	main.current_run.debuff_state.rest_penalty = 1
 	main.health_component.current_health = 1
-	check(main.get_rest_shop_offer(id, "small").heal == ceili(main.health_component.max_health * 0.2) + 1, "Rest modifiers incorrect")
+	check(main.get_rest_shop_offer(id, "instant").heal == ceili(main.health_component.max_health * 0.2) + 1, "Rest modifiers incorrect")
 	main._on_reward_interaction_requested(room)
 	var original_font_size: int = main.rest_shop.theme.get_font_size("font_size", "RestShopText")
 	main.rest_shop.theme.set_font_size("font_size", "RestShopText", 18)
@@ -91,7 +92,7 @@ func run_tests() -> void:
 		await create_timer(0.7, true).timeout
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("res://.godot/rest-shop-preview.png")
-	main.rest_shop._choose("small")
+	main.rest_shop._choose("instant")
 	check(room_data.completed and main.current_run.gold == 5, "Free choice failed or charged gold")
 	main.queue_free()
 	paused = false

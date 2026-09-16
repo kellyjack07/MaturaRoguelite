@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="EnemyHealthBarStyle" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/enemy_health_bar_style.gd" id="1_style"]
+
+[resource]
+script = ExtResource("1_style")
+width = 56.0
+height = 6.0
+offset = Vector2(0, -32)
+fill_color = Color(0.82, 0.12, 0.12, 1)
+background_color = Color(0.035, 0.035, 0.045, 0.95)
+border_color = Color(0.72, 0.75, 0.82, 0.9)
+border_width = 1

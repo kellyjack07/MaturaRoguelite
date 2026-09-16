@@ -33,6 +33,8 @@ enum ActionState {
 
 @onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var health_component: HealthComponent = $Health
+@onready var stamina_component: StaminaComponent = $Stamina
+@onready var potion_inventory: PotionInventory = $PotionInventory
 @onready var attack_area: HitboxComponent = $AttackArea
 @onready var hurtbox: HurtboxComponent = $Hurtbox
 
@@ -76,6 +78,7 @@ signal died
 signal death_started
 signal debug_state_changed
 signal weapon_equipped(weapon_id: String)
+signal potion_use_requested
 
 
 func _ready() -> void:
@@ -91,9 +94,11 @@ func _physics_process(delta: float) -> void:
 	update_facing_direction()
 
 	if action_state != ActionState.DEAD:
+		handle_stamina_bottle_input()
 		handle_dash_input()
 		update_movement_state()
 		handle_attack_input()
+		stamina_component.tick(delta, is_dashing, not health_component.is_dead())
 
 	update_action(delta)
 	update_attack_movement(delta)
@@ -352,15 +357,28 @@ func handle_dash_input() -> void:
 		start_dash()
 
 
+func handle_stamina_bottle_input() -> void:
+	if Input.is_action_just_pressed("use_stamina_bottle"):
+		potion_use_requested.emit()
+
+
 func can_dash() -> bool:
-	return not is_dashing and dash_cooldown_left <= 0.0
+	return (
+		not is_dashing
+		and dash_cooldown_left <= 0.0
+		and stamina_component != null
+		and stamina_component.can_spend(stamina_component.get_dash_cost())
+	)
 
 
 func start_dash() -> void:
+	if not can_dash() or stamina_component == null or not stamina_component.spend(stamina_component.get_dash_cost()):
+		return
 	is_dashing = true
 	dash_time_left = dash_duration
 	dash_cooldown_left = dash_cooldown
 	dash_direction = input_direction.normalized() if input_direction != Vector2.ZERO else move_direction.normalized()
+	hurtbox.set_dash_immunity(true)
 
 
 func update_dash(delta: float) -> void:
@@ -375,6 +393,7 @@ func end_dash() -> void:
 	is_dashing = false
 	dash_time_left = 0.0
 	velocity = Vector2.ZERO
+	hurtbox.set_dash_immunity(false)
 	update_movement_state()
 
 
@@ -546,6 +565,7 @@ func reset_for_run(clear_cooldowns: bool = true) -> void:
 	if clear_cooldowns:
 		special_cooldowns.clear()
 	dash_cooldown_left = 0.0
+	stamina_component.reset_for_run()
 	hurt_time_left = 0.0
 	hurtbox.reset_state()
 	cancel_transient_actions(true)
@@ -553,6 +573,35 @@ func reset_for_run(clear_cooldowns: bool = true) -> void:
 	animated_sprite.modulate = default_modulate
 	show()
 	play_idle_animation()
+
+
+func get_stamina_snapshot() -> Dictionary:
+	return stamina_component.get_snapshot()
+
+
+func set_stamina_snapshot(snapshot: Dictionary) -> void:
+	stamina_component.set_snapshot(snapshot)
+
+
+func can_use_stamina_bottle() -> bool:
+	return potion_inventory != null and potion_inventory.has("stamina") and stamina_component != null and stamina_component.can_start_boost()
+
+
+func consume_stamina_bottle() -> bool:
+	if not can_use_stamina_bottle():
+		return false
+	if not stamina_component.start_boost():
+		return false
+	potion_inventory.remove("stamina")
+	return true
+
+
+func get_potion_inventory_snapshot() -> Dictionary:
+	return potion_inventory.get_snapshot()
+
+
+func set_potion_inventory_snapshot(snapshot: Dictionary) -> void:
+	potion_inventory.set_snapshot(snapshot)
 
 
 func apply_hit_reaction(_from_position: Vector2, _damage: int) -> void:

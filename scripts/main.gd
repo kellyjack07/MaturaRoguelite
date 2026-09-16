@@ -9,6 +9,8 @@ const GOBLIN_BARREL_SCENE := preload("res://enemies/goblin_barrel.tscn")
 const ENCOUNTER_CATALOGUE := preload("res://data/encounters/encounter_catalogue.tres")
 const SAVE_FILE_PATH := "user://savegame.cfg"
 const REST_SHOP_SETTINGS = preload("res://data/ui/rest_shop_settings.tres")
+const STAMINA_BOTTLE_COST: int = 5
+const POTION_CATALOGUE = preload("res://data/player/potion_catalogue.tres")
 
 enum RoomType {
 	START,
@@ -47,6 +49,8 @@ enum RoomEventType {
 @onready var room_container: Node2D = $RoomContainer
 @onready var enemy_container: Node2D = $EnemyContainer
 @onready var health_component: HealthComponent = $Player/Health
+@onready var stamina_component: StaminaComponent = $Player/Stamina
+@onready var potion_inventory: PotionInventory = $Player/PotionInventory
 @onready var death_screen: Control = $UI/DeathScreen
 @onready var stage_transition_screen: Control = $UI/StageTransitionScreen
 @onready var stage_transition_label: Label = $UI/StageTransitionScreen/StageTransitionLabel
@@ -57,12 +61,14 @@ enum RoomEventType {
 @onready var room_event_primary_button: Button = $UI/RoomEventScreen/Panel/PrimaryButton
 @onready var room_event_secondary_button: Button = $UI/RoomEventScreen/Panel/SecondaryButton
 @onready var room_event_tertiary_button: Button = $UI/RoomEventScreen/Panel/TertiaryButton
+@onready var room_event_quaternary_button: Button = $UI/RoomEventScreen/Panel/QuaternaryButton
 @onready var main_menu_screen: Control = $UI/MainMenuScreen
 @onready var gear_store_screen: Control = $UI/GearStoreScreen
 @onready var settings_screen: Control = $UI/SettingsScreen
 @onready var pause_menu_screen: Control = $UI/PauseMenuScreen
 @onready var hud: Control = $UI/HUD
 @onready var rest_shop: Control = $UI/RestShop
+@onready var potion_inventory_screen: Control = $UI/PotionInventory
 @onready var run_background: CanvasLayer = $RunBackground
 @onready var main_menu_status_label: Label = $UI/MainMenuScreen/ContentScroll/Content/MenuStatusLabel
 @onready var continue_run_button: Button = $UI/MainMenuScreen/ContentScroll/Content/PrimaryButtons/ContinueRunButton
@@ -149,6 +155,10 @@ func _ready() -> void:
 
 func connect_ui_signals() -> void:
 	health_component.health_changed.connect(_on_player_health_changed)
+	stamina_component.stamina_changed.connect(_on_player_stamina_changed)
+	stamina_component.boost_changed.connect(_on_player_boost_changed)
+	potion_inventory.changed.connect(_on_potion_inventory_changed)
+	player.potion_use_requested.connect(_on_potion_use_requested)
 	player.debug_state_changed.connect(update_debug_ui)
 
 	$UI/MainMenuScreen/ContentScroll/Content/PrimaryButtons/StartRunButton.pressed.connect(start_new_run)
@@ -166,6 +176,7 @@ func connect_ui_signals() -> void:
 	room_event_primary_button.pressed.connect(_on_room_event_primary_button_pressed)
 	room_event_secondary_button.pressed.connect(_on_room_event_secondary_button_pressed)
 	room_event_tertiary_button.pressed.connect(_on_room_event_tertiary_button_pressed)
+	room_event_quaternary_button.pressed.connect(_on_room_event_quaternary_button_pressed)
 
 	$UI/SettingsScreen/BackButton.pressed.connect(close_settings_screen)
 	volume_slider.value_changed.connect(_on_volume_slider_value_changed)
@@ -180,6 +191,8 @@ func connect_ui_signals() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if rest_shop.visible:
 		return
+	if potion_inventory_screen.visible:
+		return
 	if not event is InputEventKey:
 		return
 	if not event.pressed or event.echo:
@@ -192,6 +205,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if event.keycode != KEY_ESCAPE:
+		if event.keycode == KEY_I:
+			open_potion_inventory()
+			get_viewport().set_input_as_handled()
 		return
 
 	if dev_weapon_screen.visible:
@@ -213,7 +229,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.is_action_pressed("ui_accept") or event.is_action_pressed("interact"):
 			_on_room_event_primary_button_pressed()
 		elif event.keycode == KEY_BACKSPACE or event.keycode == KEY_DELETE:
-			_on_room_event_tertiary_button_pressed()
+			_on_room_event_quaternary_button_pressed()
 		get_viewport().set_input_as_handled()
 		return
 
@@ -253,6 +269,11 @@ func _input(event: InputEvent) -> void:
 
 	if event.keycode == KEY_3:
 		_on_room_event_tertiary_button_pressed()
+		get_viewport().set_input_as_handled()
+		return
+
+	if event.keycode == KEY_4:
+		_on_room_event_quaternary_button_pressed()
 		get_viewport().set_input_as_handled()
 		return
 
@@ -412,6 +433,9 @@ func ensure_stage_room_shape(room_data: Dictionary) -> Dictionary:
 		room_data["defeated_enemy_ids"] = []
 	if not room_data.has("encounter_status"):
 		room_data["encounter_status"] = ""
+	if not room_data.has("shop_stock"):
+		var stocked: bool = not room_data.get("completed", false)
+		room_data["shop_stock"] = {"small_healing": stocked, "big_healing": stocked, "stamina": stocked}
 
 	return room_data
 
@@ -463,6 +487,8 @@ func build_run_snapshot() -> Dictionary:
 		"weapon": current_run.get("weapon", "sword"),
 		"weapon_cooldowns": player.get_cooldown_snapshot(),
 		"player_health": health_component.current_health,
+		"stamina": player.get_stamina_snapshot(),
+		"potion_inventory": player.get_potion_inventory_snapshot(),
 		"debuff_state": current_run.get("debuff_state", get_default_debuff_state()),
 	}
 
@@ -491,6 +517,7 @@ func apply_master_volume(volume_value: float) -> void:
 
 #menu ui
 func return_to_main_menu() -> void:
+	potion_inventory_screen.close_inventory()
 	if run_active:
 		var snapshot := build_run_snapshot().duplicate(true)
 		if save_progress() != OK:
@@ -505,6 +532,7 @@ func return_to_main_menu() -> void:
 
 func show_main_menu() -> void:
 	rest_shop.close_shop()
+	potion_inventory_screen.close_inventory()
 	run_background.hide()
 	player.cancel_actions_for_modal()
 	player.visible = false
@@ -580,6 +608,40 @@ func open_pause_menu() -> void:
 	pause_menu_screen.visible = true
 	update_pause_menu_info()
 	get_tree().paused = true
+
+
+func open_potion_inventory() -> void:
+	if not run_active or rest_shop.visible or room_event_screen.visible or pause_menu_screen.visible or death_screen.visible or stage_transition_active:
+		return
+	potion_inventory_screen.open_screen(self)
+
+
+func is_potion_combat_active() -> bool:
+	if not run_active:
+		return false
+	var room := get_current_room_data()
+	if room.is_empty():
+		return false
+	var room_type: RoomType = room.get("room_type", RoomType.START) as RoomType
+	if room_type != RoomType.COMBAT and room_type != RoomType.BOSS:
+		return false
+	return bool(room.get("initialized", false)) and not bool(room.get("completed", false)) and (
+		int(room.get("enemies_remaining", 0)) > 0 or not bool(room.get("combat_cleared", false))
+	)
+
+
+func request_potion_equip(potion_id: String) -> Dictionary:
+	if not potion_inventory.has(potion_id):
+		return {"success": false, "reason": "You do not own this potion."}
+	if is_potion_combat_active():
+		return {"success": false, "reason": "Potion equipment is locked during combat."}
+	var previous: Dictionary = potion_inventory.get_snapshot()
+	if not potion_inventory.equip(potion_id):
+		return {"success": false, "reason": "Could not equip this potion."}
+	if save_progress() != OK:
+		potion_inventory.set_snapshot(previous)
+		return {"success": false, "reason": "Could not save equipment change."}
+	return {"success": true, "reason": "Equipped " + potion_id + "."}
 
 
 func can_open_developer_weapon_screen() -> bool:
@@ -808,6 +870,7 @@ func start_new_run() -> void:
 	room_event_screen.visible = false
 	dev_weapon_screen.visible = false
 	player.reset_for_run(true)
+	potion_inventory.reset_for_run()
 	player.visible = true
 	player.set_physics_process(true)
 	player.move_speed = default_player_move_speed
@@ -877,6 +940,13 @@ func continue_saved_run() -> void:
 	apply_run_modifiers()
 	health_component.current_health = clampi(saved_health, 0, health_component.max_health)
 	health_component.health_changed.emit(health_component.current_health, health_component.max_health)
+	player.set_stamina_snapshot(current_run.get("stamina", {}))
+	var saved_inventory: Dictionary = current_run.get("potion_inventory", {})
+	if saved_inventory.is_empty() and int(current_run.get("stamina", {}).get("bottle_count", 0)) > 0:
+		# One-time migration from the old stamina-only bottle field.
+		saved_inventory = {"quantities": {"stamina": 1}, "equipped_id": "stamina"}
+	current_run["potion_inventory"] = saved_inventory
+	player.set_potion_inventory_snapshot(saved_inventory)
 	set_run_ui_visible(true)
 	update_debug_ui()
 	start_stage()
@@ -986,10 +1056,19 @@ func set_run_ui_visible(is_visible: bool) -> void:
 	hud.visible = is_visible
 	if is_visible:
 		run_background.show()
+	else:
+		hud.clear_bosses()
 
 
 func update_debug_ui() -> void:
 	hud.set_health(health_component.current_health, health_component.max_health)
+	hud.set_stamina(
+		stamina_component.current_stamina,
+		stamina_component.get_max_stamina(),
+		potion_inventory.equipped_id,
+		int(potion_inventory.has(potion_inventory.equipped_id)),
+		stamina_component.boost_time_left
+	)
 	hud.set_gold(int(current_run.get("gold", 0)))
 	hud.set_stage(get_stage_display_text())
 	var weapon_definition: Resource = WeaponRegistryScript.get_definition(get_selected_weapon_id())
@@ -1538,7 +1617,7 @@ func instantiate_stage_graph() -> void:
 		if room_data["room_type"] == RoomType.REST:
 			room_instance.configure_rest_chest(room_data.get("completed", false))
 		elif room_data["room_type"] == RoomType.REWARD:
-			room_instance.configure_shop_chest(room_data.get("completed", false))
+			refresh_shop_chest(int(room_data["id"]))
 
 	draw_stage_hallways()
 	update_stage_room_visuals()
@@ -1636,6 +1715,7 @@ func get_packed_scenes_in_folder(folder_path: String) -> Array[PackedScene]:
 
 
 func clear_active_room() -> void:
+	hud.clear_bosses()
 	for enemy in enemy_container.get_children():
 		enemy.queue_free()
 
@@ -1648,6 +1728,23 @@ func clear_active_room() -> void:
 	current_room_id = -1
 	remaining_room_enemies = 0
 	hide_room_event()
+
+
+func register_enemy_presentation(enemy: Node, record: Dictionary) -> void:
+	var enemy_id := str(record.get("enemy_id", ""))
+	var role := str(record.get("presentation_role", ""))
+	# Older in-progress records have no presentation field; infer only the
+	# already-designated Sorcerer boss and keep every other enemy overhead-only.
+	if role.is_empty():
+		role = "boss" if enemy_id == "sorcerer" else "overhead"
+	var is_designated_boss := role == "boss"
+	enemy.set_meta("presentation_role", role)
+	enemy.set_meta("designated_boss", is_designated_boss)
+	if enemy.has_method("configure_health_presentation"):
+		enemy.configure_health_presentation(not is_designated_boss)
+	if is_designated_boss and hud != null and hud.has_method("register_boss"):
+		var display_name := "Sorcerer" if enemy_id == "sorcerer" else enemy_id.capitalize()
+		hud.register_boss(enemy, display_name, str(record.get("instance_id", "")))
 
 
 func grid_to_world_position(grid_position: Vector2i) -> Vector2:
@@ -1778,7 +1875,7 @@ func handle_room_entry(room_data: Dictionary) -> void:
 				room_node.set_room_label(challenge_name + " Room")
 		RoomType.REWARD:
 			room_node.hide_stage_exit()
-			room_node.configure_shop_chest(room_data.get("completed", false))
+			refresh_shop_chest(int(room_data["id"]))
 			room_node.set_room_label("Shop Room")
 		RoomType.REST:
 			room_node.configure_rest_chest(room_data.get("completed", false))
@@ -1797,20 +1894,25 @@ func handle_room_entry(room_data: Dictionary) -> void:
 
 func get_rest_shop_offer(room_id: int, potion: String) -> Dictionary:
 	var room := get_room_data_by_id(room_id)
-	var cost: int = REST_SHOP_SETTINGS.big_cost if potion == "big" else 0
-	var fraction: float = REST_SHOP_SETTINGS.big_heal_fraction if potion == "big" else REST_SHOP_SETTINGS.small_heal_fraction
+	var is_instant := potion == "instant"
+	var definition := POTION_CATALOGUE.get_definition("%s_healing" % potion)
+	var cost: int = definition.price if definition != null and not is_instant else 0
+	var fraction: float = REST_SHOP_SETTINGS.small_heal_fraction if potion in ["instant", "small"] else REST_SHOP_SETTINGS.big_heal_fraction
 	var penalty: int = int(current_run.get("debuff_state", {}).get("rest_penalty", 0))
 	var bonus: int = int(meta_progression.get("gear", {}).get("rest_bonus", 0))
-	var healing := maxi(ceili(health_component.max_health * fraction) + bonus - penalty, 0)
-	healing = mini(healing, maxi(health_component.max_health - health_component.current_health, 0))
+	var healing := maxi(ceili(health_component.max_health * fraction) + (bonus - penalty if is_instant else 0), 0)
+	if is_instant:
+		healing = mini(healing, maxi(health_component.max_health - health_component.current_health, 0))
 	var reason := ""
-	if potion not in ["small", "big"] or room.is_empty() or room.get("room_type", -1) != RoomType.REST:
+	if potion not in ["instant", "small", "big"] or room.is_empty() or room.get("room_type", -1) != RoomType.REST:
 		reason = "Invalid rest offer."
 	elif not run_active or health_component.is_dead():
 		reason = "No active player."
 	elif room.get("completed", false):
 		reason = "This chest has been used."
-	elif healing == 0:
+	elif not is_instant and potion_inventory.has("%s_healing" % potion):
+		reason = "You already carry this potion."
+	elif healing == 0 and is_instant:
 		reason = "No healing available."
 	elif int(current_run.get("gold", 0)) < cost:
 		reason = "Not enough gold."
@@ -1826,14 +1928,19 @@ func select_rest_shop_offer(room_id: int, potion: String) -> Dictionary:
 	var room := get_room_data_by_id(room_id)
 	var old_health: int = health_component.current_health
 	var old_gold: int = int(current_run.get("gold", 0))
+	var old_inventory: Dictionary = player.get_potion_inventory_snapshot()
 	current_run["gold"] = old_gold - int(offer.cost)
 	room["completed"] = true
-	health_component.heal(int(offer.heal))
+	if potion == "instant":
+		health_component.heal(int(offer.heal))
+	else:
+		potion_inventory.add("%s_healing" % potion)
 	set_room_data_by_id(room)
 	if save_progress() != OK:
 		current_run["gold"] = old_gold
 		room["completed"] = false
 		health_component.current_health = old_health
+		player.set_potion_inventory_snapshot(old_inventory)
 		health_component.health_changed.emit(old_health, health_component.max_health)
 		set_room_data_by_id(room)
 		update_debug_ui()
@@ -1927,6 +2034,7 @@ func prepare_stage_encounters() -> void:
 				"scene_path": scene_path,
 				"implemented": implemented,
 				"defeated": false,
+				"presentation_role": "boss" if enemy_id == "sorcerer" else "overhead",
 			})
 
 		room_data["encounter_enemy_records"] = records
@@ -2025,6 +2133,7 @@ func spawn_room_enemies(room_id: int) -> void:
 		enemy.set_meta("room_id", room_id)
 		enemy.set_meta("encounter_enemy_id", str(record.get("instance_id", "")))
 		enemy.set_meta("catalogue_enemy_id", str(record.get("enemy_id", "")))
+		register_enemy_presentation(enemy, record)
 
 		var enemy_health: HealthComponent = enemy.get_node("Health")
 		enemy_health.died.connect(_on_room_enemy_died.bind(room_id, str(record.get("instance_id", ""))))
@@ -2081,6 +2190,7 @@ func spawn_summoned_enemies(
 			"defeated": false,
 			"summoned_by": summoner_id,
 			"summon_wave": wave_number,
+			"presentation_role": "overhead",
 		})
 	room_data["encounter_enemy_records"] = records
 	room_data["enemies_remaining"] = int(room_data.get("enemies_remaining", 0)) + spawn_count
@@ -2098,6 +2208,7 @@ func spawn_summoned_enemies(
 		summoned_enemy.set_meta("room_id", room_id)
 		summoned_enemy.set_meta("encounter_enemy_id", str(summon_record["instance_id"]))
 		summoned_enemy.set_meta("catalogue_enemy_id", enemy_id)
+		register_enemy_presentation(summoned_enemy, summon_record)
 		var enemy_health: HealthComponent = summoned_enemy.get_node("Health")
 		enemy_health.died.connect(_on_room_enemy_died.bind(room_id, str(summon_record["instance_id"])))
 
@@ -2443,6 +2554,11 @@ func _on_room_enemy_died(room_id: int, encounter_enemy_id: String = "") -> void:
 		room_data["encounter_enemy_records"] = records
 
 	room_data["enemies_remaining"] = max(int(room_data.get("enemies_remaining", 0)) - 1, 0)
+	if not defeated_record.is_empty() and (
+		str(defeated_record.get("presentation_role", "")) == "boss"
+		or str(defeated_record.get("enemy_id", "")) == "sorcerer"
+	):
+		hud.unregister_boss(encounter_enemy_id)
 	set_room_data_by_id(room_data)
 	if run_active:
 		save_progress()
@@ -2596,6 +2712,7 @@ func show_room_event(
 	room_event_type: RoomEventType,
 	secondary_text: String = "",
 	tertiary_text: String = "",
+	quaternary_text: String = "",
 ) -> void:
 	room_event_title_label.text = title
 	room_event_body_label.text = body
@@ -2603,15 +2720,23 @@ func show_room_event(
 
 	room_event_primary_button.text = primary_text
 	room_event_primary_button.disabled = false
+	room_event_primary_button.tooltip_text = ""
 	room_event_primary_button.focus_mode = Control.FOCUS_ALL
 	room_event_secondary_button.visible = not secondary_text.is_empty()
 	room_event_secondary_button.text = secondary_text
 	room_event_secondary_button.disabled = false
+	room_event_secondary_button.tooltip_text = ""
 	room_event_secondary_button.focus_mode = Control.FOCUS_ALL
 	room_event_tertiary_button.visible = not tertiary_text.is_empty()
 	room_event_tertiary_button.text = tertiary_text
 	room_event_tertiary_button.disabled = false
+	room_event_tertiary_button.tooltip_text = ""
 	room_event_tertiary_button.focus_mode = Control.FOCUS_ALL
+	room_event_quaternary_button.visible = not quaternary_text.is_empty()
+	room_event_quaternary_button.text = quaternary_text
+	room_event_quaternary_button.disabled = false
+	room_event_quaternary_button.tooltip_text = ""
+	room_event_quaternary_button.focus_mode = Control.FOCUS_ALL
 
 	current_room_event_type = room_event_type
 
@@ -2642,7 +2767,7 @@ func _on_room_event_primary_button_pressed() -> void:
 		RoomEventType.BOSS_CHEST_REWARD:
 			_on_boss_chest_reward_collected()
 		RoomEventType.REWARD_CHOICE:
-			_on_reward_room_free_reward_pressed()
+			_on_shop_potion_pressed("small_healing")
 		RoomEventType.DEBUFF_NOTICE:
 			_on_debuff_room_continue_pressed()
 
@@ -2651,10 +2776,17 @@ func _on_room_event_secondary_button_pressed() -> void:
 	if not room_event_screen.visible:
 		return
 	if current_room_event_type == RoomEventType.REWARD_CHOICE:
-		_on_reward_room_buy_healing_pressed()
+		_on_shop_potion_pressed("big_healing")
 
 
 func _on_room_event_tertiary_button_pressed() -> void:
+	if not room_event_screen.visible:
+		return
+	if current_room_event_type == RoomEventType.REWARD_CHOICE:
+		_on_shop_potion_pressed("stamina")
+
+
+func _on_room_event_quaternary_button_pressed() -> void:
 	if not room_event_screen.visible:
 		return
 	if current_room_event_type == RoomEventType.REWARD_CHOICE:
@@ -2687,19 +2819,7 @@ func _on_reward_interaction_requested(room: StageRoom) -> void:
 	if is_current_room_completed():
 		return
 
-	current_room.hide_reward_interactable()
-	show_room_event(
-		"Shop Room",
-		"Choose one reward.\n\nFree: +1 Gold\nBuy: Heal %s HP for %s Gold" % [
-			str(reward_room_buy_heal_amount),
-			str(reward_room_buy_heal_cost),
-		],
-		"Take Free Reward",
-		RoomEventType.REWARD_CHOICE,
-		"Buy Healing",
-		"Leave",
-	)
-	current_room.set_rest_chest_pose("opening")
+	rest_shop.open_shop(self, room.room_id)
 
 
 func resolve_reward_room(exit_text: String) -> void:
@@ -2710,22 +2830,147 @@ func resolve_reward_room(exit_text: String) -> void:
 		current_room.set_room_label(exit_text)
 
 
-func _on_reward_room_free_reward_pressed() -> void:
-	add_run_gold(1)
-	resolve_reward_room("Reward Claimed\nExit")
+func get_shop_potion_reason(potion_id: String, room_id: int = -1) -> String:
+	if not run_active or health_component.is_dead():
+		return "No active run."
+	if room_id < 0:
+		room_id = current_room_id
+	var room := get_room_data_by_id(room_id)
+	if room.is_empty() or room.get("room_type", -1) != RoomType.REWARD:
+		return "Only available in a Shop Room."
+	if room.get("completed", false):
+		return "Shop sold out."
+	var stock: Dictionary = room.get("shop_stock", {})
+	if not bool(stock.get(potion_id, false)):
+		return "Offer sold out."
+	if potion_inventory.has(potion_id):
+		return "You already carry this potion."
+	var definition := POTION_CATALOGUE.get_definition(potion_id)
+	if definition == null:
+		return "Unknown potion."
+	if int(current_run.get("gold", 0)) < definition.price:
+		return "Not enough gold."
+	return ""
 
 
-func _on_reward_room_buy_healing_pressed() -> void:
-	if not spend_run_gold(reward_room_buy_heal_cost):
-		room_event_status_label.text = "Not enough gold."
+func get_shop_potion_offer(room_id: int, potion_id: String) -> Dictionary:
+	var reason := get_shop_potion_reason(potion_id, room_id)
+	var definition := POTION_CATALOGUE.get_definition(potion_id)
+	return {"available": reason.is_empty(), "reason": reason, "cost": definition.price if definition != null else 0}
+
+
+func refresh_shop_event_buttons() -> void:
+	var ids := ["small_healing", "big_healing", "stamina"]
+	var buttons_for_ids := [room_event_primary_button, room_event_secondary_button, room_event_tertiary_button]
+	for index in ids.size():
+		var reason := get_shop_potion_reason(ids[index])
+		buttons_for_ids[index].disabled = not reason.is_empty()
+		buttons_for_ids[index].tooltip_text = reason
+
+
+func _on_shop_potion_pressed(potion_id: String) -> void:
+	var result := select_shop_potion(current_room_id, potion_id)
+	room_event_status_label.text = result.reason
+
+
+func select_shop_potion(room_id: int, potion_id: String) -> Dictionary:
+	if not rest_shop.visible or not rest_shop.is_shop or rest_shop.room_id != room_id:
+		return {"success": false, "reason": "Open this shop first."}
+	var reason := get_shop_potion_reason(potion_id, room_id)
+	if not reason.is_empty():
+		return {"success": false, "reason": reason}
+	var definition := POTION_CATALOGUE.get_definition(potion_id)
+	var old_gold := int(current_run.get("gold", 0))
+	var old_inventory: Dictionary = player.get_potion_inventory_snapshot()
+	var room := get_room_data_by_id(room_id)
+	var old_stock: Dictionary = room.get("shop_stock", {}).duplicate(true)
+	var old_completed: bool = room.get("completed", false)
+	current_run["gold"] = old_gold - definition.price
+	potion_inventory.add(potion_id)
+	var stock: Dictionary = room.get("shop_stock", {})
+	stock[potion_id] = false
+	room["shop_stock"] = stock
+	room["completed"] = not stock.values().has(true)
+	set_room_data_by_id(room)
+	if save_progress() != OK:
+		current_run["gold"] = old_gold
+		player.set_potion_inventory_snapshot(old_inventory)
+		room["shop_stock"] = old_stock
+		room["completed"] = old_completed
+		set_room_data_by_id(room)
+		update_debug_ui()
+		return {"success": false, "reason": "Could not save. Please try again."}
+	refresh_shop_chest(room_id)
+	update_debug_ui()
+	return {"success": true, "reason": definition.display_name + " acquired."}
+
+
+func refresh_shop_chest(room_id: int) -> void:
+	var room := ensure_stage_room_shape(get_room_data_by_id(room_id))
+	var node := get_room_node(room_id)
+	if node == null:
 		return
-
-	health_component.heal(reward_room_buy_heal_amount)
-	resolve_reward_room("Healing Bought\nExit")
+	node.configure_shop_chest(room.get("completed", false))
+	# Sold stock records that this chest has been opened, even before it sells out.
+	if room.get("shop_stock", {}).values().has(false):
+		node.set_rest_chest_pose("open")
 
 
 func _on_reward_room_leave_pressed() -> void:
-	resolve_reward_room("Skipped Reward\nExit")
+	var room := get_current_room_data()
+	var stock: Dictionary = room.get("shop_stock", {})
+	var has_stock := false
+	for available: Variant in stock.values():
+		if bool(available):
+			has_stock = true
+			break
+	hide_room_event()
+	if not has_stock:
+		mark_current_room_completed()
+	if current_room != null:
+		current_room.configure_shop_chest(not has_stock)
+		current_room.set_room_label("Shop Room" if has_stock else "Shop Clear")
+
+
+func _on_potion_use_requested() -> void:
+	if not run_active or get_tree().paused or health_component.is_dead():
+		return
+	var potion_id := potion_inventory.equipped_id
+	if not potion_inventory.has(potion_id):
+		return
+	var previous_state: Dictionary = player.get_stamina_snapshot()
+	var previous_inventory: Dictionary = player.get_potion_inventory_snapshot()
+	var previous_health := health_component.current_health
+	var consumed := false
+	if potion_id == "stamina":
+		consumed = player.consume_stamina_bottle()
+	elif potion_id == "small_healing" or potion_id == "big_healing":
+		if health_component.current_health >= health_component.max_health:
+			return
+		var fraction := 0.2 if potion_id == "small_healing" else 0.5
+		var healing := ceili(health_component.max_health * fraction)
+		health_component.heal(mini(healing, health_component.max_health - health_component.current_health))
+		consumed = potion_inventory.remove(potion_id)
+	if not consumed:
+		return
+	if save_progress() != OK:
+		health_component.current_health = previous_health
+		health_component.health_changed.emit(previous_health, health_component.max_health)
+		player.set_stamina_snapshot(previous_state)
+		player.set_potion_inventory_snapshot(previous_inventory)
+		push_warning("Could not save potion consumption; restored potion state.")
+
+
+func _on_player_stamina_changed(_current: float, _maximum: float) -> void:
+	update_debug_ui()
+
+
+func _on_player_boost_changed(_seconds_left: float) -> void:
+	update_debug_ui()
+
+
+func _on_potion_inventory_changed() -> void:
+	update_debug_ui()
 
 
 func _on_combat_reward_collected() -> void:
@@ -2784,6 +3029,7 @@ func _on_stage_exit_requested(room: StageRoom) -> void:
 #player death
 func _on_player_death_started() -> void:
 	rest_shop.close_shop()
+	potion_inventory_screen.close_inventory()
 	set_run_ui_visible(false)
 	close_developer_weapon_screen()
 	enemy_container.process_mode = Node.PROCESS_MODE_DISABLED

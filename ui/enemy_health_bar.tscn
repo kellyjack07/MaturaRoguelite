@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/enemy_health_bar.gd" id="1_bar"]
+
+[node name="EnemyHealthBar" type="Control"]
+mouse_filter = 2
+script = ExtResource("1_bar")
+
+[node name="Background" type="Panel" parent="."]
+mouse_filter = 2
+
+[node name="Fill" type="ColorRect" parent="."]
+mouse_filter = 2

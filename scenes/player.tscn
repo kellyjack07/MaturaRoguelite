@@ -6,6 +6,8 @@
 [ext_resource type="Script" uid="uid://by6a20ksr22xh" path="res://scripts/health_component.gd" id="5_qlg0r"]
 [ext_resource type="Script" uid="uid://cc4hg5m86k3pi" path="res://scripts/hitbox_component.gd" id="6_tuyoq"]
 [ext_resource type="Script" uid="uid://bomvf3khf8d46" path="res://scripts/hurtbox_component.gd" id="7_fjrip"]
+[ext_resource type="Script" path="res://scripts/stamina_component.gd" id="8_stamina"]
+[ext_resource type="Script" path="res://scripts/potion_inventory.gd" id="9_inventory"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_tuyoq"]
 atlas = ExtResource("2_qlg0r")
@@ -1309,6 +1311,12 @@ zoom = Vector2(2, 2)
 [node name="Health" type="Node" parent="." unique_id=2027964474]
 script = ExtResource("5_qlg0r")
 max_health = 25
+
+[node name="Stamina" type="Node" parent="." unique_id=2027964475]
+script = ExtResource("8_stamina")
+
+[node name="PotionInventory" type="Node" parent="." unique_id=2027964476]
+script = ExtResource("9_inventory")
 
 [node name="AttackArea" type="Area2D" parent="." unique_id=1575710335]
 collision_layer = 0
