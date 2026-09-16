@@ -89,7 +89,9 @@ func update_pass_state(delta: float, second_pass: bool) -> void:
 	else:
 		play_pass_one_animation()
 
-	if not attack_damage_applied and global_position.distance_to(target_center) <= attack_damage_radius:
+	# Check the player's live position at the hit frame. The position captured
+	# during preparation is only the pass target and must not authorize a stale hit.
+	if not attack_damage_applied and player != null and global_position.distance_to(player.global_position) <= attack_damage_radius:
 		attack_damage_applied = true
 		damage_player_in_attack_radius()
 

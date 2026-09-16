@@ -2055,9 +2055,9 @@ func get_encounter_count_for_generation(room_data: Dictionary, max_spawn_count: 
 	if max_spawn_count <= 0:
 		return 0
 	if room_data.has("resume_enemy_count"):
-		return mini(int(room_data["resume_enemy_count"]), max_spawn_count)
+		return maxi(int(room_data["resume_enemy_count"]), 0)
 	if int(room_data.get("enemies_remaining", 0)) > 0:
-		return mini(int(room_data["enemies_remaining"]), max_spawn_count)
+		return maxi(int(room_data["enemies_remaining"]), 0)
 	if str(room_data.get("encounter_kind", "")) == "major_boss":
 		var boss_support := encounter_catalogue.get_boss_support_policy(current_stage)
 		if not boss_support.is_empty():
@@ -2097,6 +2097,9 @@ func spawn_room_enemies(room_id: int) -> void:
 		if int(existing_enemy.get_meta("room_id", -1)) == room_id and not existing_enemy.is_queued_for_deletion():
 			return
 	var enemy_spawn_positions: Array[Vector2] = room_node.get_enemy_spawn_positions()
+	if enemy_spawn_positions.is_empty():
+		# Keep restored records recoverable even if a room has no configured marker.
+		enemy_spawn_positions.append(room_node.global_position)
 	var records: Array = room_data.get("encounter_enemy_records", [])
 	if records.is_empty() or not room_data.get("encounter_generated", false):
 		prepare_stage_encounters()
@@ -2106,7 +2109,9 @@ func spawn_room_enemies(room_id: int) -> void:
 	for record: Variant in records:
 		if record is Dictionary and not bool(record.get("defeated", false)):
 			alive_records.append(record)
-	var enemy_count: int = mini(alive_records.size(), enemy_spawn_positions.size())
+	# Saved summons can outnumber physical spawn markers. Reuse marker positions
+	# cyclically so every living record is restored instead of being discarded.
+	var enemy_count: int = alive_records.size()
 	room_data["enemies_remaining"] = enemy_count
 	room_data.erase("resume_enemy_count")
 	set_room_data_by_id(room_data)
@@ -2129,7 +2134,7 @@ func spawn_room_enemies(room_id: int) -> void:
 		if str(record.get("enemy_id", "")) == "sorcerer":
 			enemy.global_position = get_sorcerer_spawn_position(room_node)
 		else:
-			enemy.global_position = enemy_spawn_positions[enemy_index]
+			enemy.global_position = enemy_spawn_positions[enemy_index % enemy_spawn_positions.size()]
 		enemy.set_meta("room_id", room_id)
 		enemy.set_meta("encounter_enemy_id", str(record.get("instance_id", "")))
 		enemy.set_meta("catalogue_enemy_id", str(record.get("enemy_id", "")))
@@ -2147,7 +2152,13 @@ func spawn_room_enemies(room_id: int) -> void:
 
 func _on_sorcerer_summon_wave_requested(wave_number: int, room_id: int, sorcerer_id: String) -> void:
 	var room_data: Dictionary = get_room_data_by_id(room_id)
-	if room_data.is_empty() or room_data.get("completed", false):
+	if room_data.is_empty() or room_data.get("completed", false) or current_room_id != room_id:
+		return
+	var sorcerer := get_room_enemy_by_encounter_id(room_id, sorcerer_id)
+	if sorcerer == null or not is_instance_valid(sorcerer):
+		return
+	var sorcerer_health := sorcerer.get_node_or_null("Health") as HealthComponent
+	if sorcerer_health == null or sorcerer_health.is_dead():
 		return
 	var policy := encounter_catalogue.get_boss_support_policy(current_stage)
 	if policy.is_empty() or wave_number < 1 or wave_number > int(policy.get("sorcerer_wave_count", 0)):
@@ -2576,9 +2587,15 @@ func _on_room_enemy_died(room_id: int, encounter_enemy_id: String = "") -> void:
 
 func _on_sorcerer_summon_group_cleared(room_id: int, sorcerer_id: String, wave_number: int) -> void:
 	var room_data: Dictionary = get_room_data_by_id(room_id)
-	if room_data.is_empty() or wave_number <= 0 or room_data.get("completed", false):
+	if room_data.is_empty() or wave_number <= 0 or room_data.get("completed", false) or current_room_id != room_id:
 		return
 	if get_completed_sorcerer_waves(room_data, sorcerer_id) < wave_number:
+		return
+	var sorcerer := get_room_enemy_by_encounter_id(room_id, sorcerer_id)
+	if sorcerer == null or not is_instance_valid(sorcerer):
+		return
+	var sorcerer_health := sorcerer.get_node_or_null("Health") as HealthComponent
+	if sorcerer_health == null or sorcerer_health.is_dead():
 		return
 	var policy := encounter_catalogue.get_boss_support_policy(current_stage)
 	var total_waves := int(policy.get("sorcerer_wave_count", 0))
@@ -2589,8 +2606,7 @@ func _on_sorcerer_summon_group_cleared(room_id: int, sorcerer_id: String, wave_n
 	var support_scene := policy.get("scene") as PackedScene
 	if not support_enemy_id.is_empty() and support_count > 0 and support_scene != null:
 		spawn_summoned_enemies(room_id, sorcerer_id, wave_number, support_enemy_id, support_count, support_scene)
-	var sorcerer := get_room_enemy_by_encounter_id(room_id, sorcerer_id)
-	if sorcerer != null and sorcerer.has_method("notify_summon_wave_cleared"):
+	if sorcerer.has_method("notify_summon_wave_cleared"):
 		sorcerer.notify_summon_wave_cleared(wave_number)
 
 

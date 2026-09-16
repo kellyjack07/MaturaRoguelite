@@ -13,16 +13,20 @@ signal summon_wave_requested(wave_number: int)
 var summon_timer: float = 0.0
 var wave_number: int = 0
 var next_wave_ready: bool = false
+var summon_animation_active: bool = false
 
 
 func on_enemy_ready() -> void:
 	hitbox.set_active(false)
 	summon_timer = summon_initial_delay
+	animated_sprite.animation_finished.connect(_on_animation_finished)
 	play_idle_animation()
 
 
 func update_behavior(delta: float) -> void:
 	stop_moving()
+	if summon_animation_active:
+		return
 	play_idle_animation()
 	summon_timer -= delta
 	if wave_number >= sorcerer_wave_count:
@@ -61,8 +65,15 @@ func play_move_animation() -> void:
 
 
 func play_summon_animation() -> void:
-	if not play_animation_if_exists(&"summon"):
+	if play_animation_if_exists(&"summon"):
+		summon_animation_active = true
+	else:
 		play_idle_animation()
+
+
+func _on_animation_finished() -> void:
+	if animated_sprite.animation == &"summon":
+		summon_animation_active = false
 
 
 func on_died() -> void:

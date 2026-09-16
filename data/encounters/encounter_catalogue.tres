@@ -5,6 +5,13 @@
 [ext_resource type="PackedScene" uid="uid://bg3vo1c6kpt4u" path="res://enemies/goblin_barrel.tscn" id="3_barrel"]
 [ext_resource type="PackedScene" uid="uid://hepg7d2poc77" path="res://enemies/monster_slasher.tscn" id="5_monster_slasher"]
 [ext_resource type="PackedScene" uid="uid://c4klcrloaa2qv" path="res://enemies/sorcerer.tscn" id="6_sorcerer"]
+[ext_resource type="PackedScene" path="res://enemies/green_goblin.tscn" id="7_green_goblin"]
+[ext_resource type="PackedScene" path="res://enemies/orc_archer.tscn" id="8_orc_archer"]
+[ext_resource type="PackedScene" path="res://enemies/orc_barbare.tscn" id="9_orc_barbare"]
+[ext_resource type="PackedScene" path="res://enemies/orc_archer_blue.tscn" id="10_orc_archer_blue"]
+[ext_resource type="PackedScene" path="res://enemies/orc_archer_red.tscn" id="11_orc_archer_red"]
+[ext_resource type="PackedScene" path="res://enemies/orc_barbare_blue.tscn" id="12_orc_barbare_blue"]
+[ext_resource type="PackedScene" path="res://enemies/orc_barbare_red.tscn" id="13_orc_barbare_red"]
 
 [resource]
 script = ExtResource("1_catalogue")
@@ -82,18 +89,22 @@ stage_settings = {
 "final_challenge_encounter_id": "stage_2_final_challenge",
 "final_roster": [{
 "enemy_id": "green_goblin",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("7_green_goblin")
 }, {
 "enemy_id": "green_orc_archer",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("8_orc_archer")
 }],
 "major_boss_encounter_id": "sorcerer_monster_slasher",
 "regular_roster": [{
 "enemy_id": "green_goblin",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("7_green_goblin")
 }, {
 "enemy_id": "green_orc_archer",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("8_orc_archer")
 }]
 },
 "3": {
@@ -123,18 +134,54 @@ stage_settings = {
 "final_challenge_encounter_id": "stage_3_final_challenge",
 "final_roster": [{
 "enemy_id": "orc_barbare",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("9_orc_barbare")
 }, {
 "enemy_id": "orc_archer",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("8_orc_archer")
+}, {
+"enemy_id": "blue_orc_barbare",
+"implemented": true,
+"scene": ExtResource("12_orc_barbare_blue")
+}, {
+"enemy_id": "red_orc_barbare",
+"implemented": true,
+"scene": ExtResource("13_orc_barbare_red")
+}, {
+"enemy_id": "blue_orc_archer",
+"implemented": true,
+"scene": ExtResource("10_orc_archer_blue")
+}, {
+"enemy_id": "red_orc_archer",
+"implemented": true,
+"scene": ExtResource("11_orc_archer_red")
 }],
 "major_boss_encounter_id": "sorcerer_monster_slasher",
 "regular_roster": [{
 "enemy_id": "orc_barbare",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("9_orc_barbare")
 }, {
 "enemy_id": "orc_archer",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("8_orc_archer")
+}, {
+"enemy_id": "blue_orc_barbare",
+"implemented": true,
+"scene": ExtResource("12_orc_barbare_blue")
+}, {
+"enemy_id": "red_orc_barbare",
+"implemented": true,
+"scene": ExtResource("13_orc_barbare_red")
+}, {
+"enemy_id": "blue_orc_archer",
+"implemented": true,
+"scene": ExtResource("10_orc_archer_blue")
+}, {
+"enemy_id": "red_orc_archer",
+"implemented": true,
+"scene": ExtResource("11_orc_archer_red")
 }, {
 "enemy_id": "strong_goblin",
 "implemented": false

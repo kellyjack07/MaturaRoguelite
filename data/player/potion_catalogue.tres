@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="PotionCatalogue" format=3 uid="uid://b8dv2ixqmedf2"]
 
-[ext_resource type="Script" path="res://scripts/potion_catalogue.gd" id="1_catalogue"]
-[ext_resource type="Script" path="res://scripts/potion_definition.gd" id="2_definition"]
+[ext_resource type="Script" uid="uid://d3afys87oaa2g" path="res://scripts/potion_catalogue.gd" id="1_catalogue"]
+[ext_resource type="Script" uid="uid://cj35s0824vj8m" path="res://scripts/potion_definition.gd" id="2_definition"]
 [ext_resource type="Texture2D" uid="uid://ct0pi34ub8kj3" path="res://assets/items/Pixel Potion Pack - FINISHED/Small Vial/RED/Small Vial - RED - Spritesheet.png" id="3_small"]
 [ext_resource type="Texture2D" uid="uid://ysren7dcf23i" path="res://assets/items/Pixel Potion Pack - FINISHED/Round Potion/RED/Round Potion - RED - Spritesheet.png" id="4_big"]
 [ext_resource type="Texture2D" uid="uid://ck85e3jxe75lc" path="res://assets/items/Pixel Potion Pack - FINISHED/Small Bottle/BLUE/Sprites/Small Bottle - BLUE - 0000.png" id="5_stamina"]

@@ -6,8 +6,8 @@
 [ext_resource type="Script" uid="uid://by6a20ksr22xh" path="res://scripts/health_component.gd" id="5_qlg0r"]
 [ext_resource type="Script" uid="uid://cc4hg5m86k3pi" path="res://scripts/hitbox_component.gd" id="6_tuyoq"]
 [ext_resource type="Script" uid="uid://bomvf3khf8d46" path="res://scripts/hurtbox_component.gd" id="7_fjrip"]
-[ext_resource type="Script" path="res://scripts/stamina_component.gd" id="8_stamina"]
-[ext_resource type="Script" path="res://scripts/potion_inventory.gd" id="9_inventory"]
+[ext_resource type="Script" uid="uid://blb1v5lfqdq14" path="res://scripts/stamina_component.gd" id="8_stamina"]
+[ext_resource type="Script" uid="uid://jyh7vvxjrtid" path="res://scripts/potion_inventory.gd" id="9_inventory"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_tuyoq"]
 atlas = ExtResource("2_qlg0r")
