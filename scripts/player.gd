@@ -69,6 +69,8 @@ var hurt_time_left: float = 0.0
 var attack_movement_lock_left: float = 0.0
 var attack_forward_motion_left: float = 0.0
 var attack_forward_motion_direction: Vector2 = Vector2.ZERO
+var burn_time_left: float = 0.0
+var burn_tick_left: float = 0.0
 var special_cooldowns: Dictionary = {}
 var visual_generation: int = 0
 var death_emitted: bool = false
@@ -90,6 +92,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	update_cooldowns(delta)
+	_update_burn(delta)
 	get_input_direction()
 	update_facing_direction()
 
@@ -263,6 +266,32 @@ func cancel_transient_actions(cancel_dash: bool = true) -> void:
 		end_dash()
 	animated_sprite.modulate = default_modulate
 	animated_sprite.visible = true
+
+
+func apply_burn(duration: float = 3.0) -> void:
+	if health_component.is_dead():
+		return
+	burn_time_left = maxf(burn_time_left, duration)
+	if burn_tick_left <= 0.0:
+		burn_tick_left = 1.0
+
+
+func clear_burn() -> void:
+	burn_time_left = 0.0
+	burn_tick_left = 0.0
+
+
+func _update_burn(delta: float) -> void:
+	if burn_time_left <= 0.0 or health_component.is_dead():
+		return
+	burn_time_left = maxf(burn_time_left - delta, 0.0)
+	burn_tick_left -= delta
+	if burn_tick_left > 0.0:
+		return
+	burn_tick_left = 1.0
+	var player_hurtbox := get_node_or_null("Hurtbox") as HurtboxComponent
+	if player_hurtbox != null:
+		player_hurtbox.take_hit(1, global_position)
 
 
 func cancel_actions_for_modal() -> void:
@@ -640,6 +669,7 @@ func on_died() -> void:
 	if action_state == ActionState.DEAD:
 		return
 	death_started.emit()
+	clear_burn()
 	visual_generation += 1
 	cancel_transient_actions(true)
 	action_state = ActionState.DEAD

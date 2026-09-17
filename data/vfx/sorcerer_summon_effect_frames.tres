@@ -1,0 +1,78 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://c1lqxymx60jne"]
+
+[ext_resource type="Texture2D" uid="uid://crxr4nc7p1jeo" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (12)1.png" id="1_b6m8o"]
+[ext_resource type="Texture2D" uid="uid://2a2tp8joeo6i" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (12)2.png" id="2_be8lc"]
+[ext_resource type="Texture2D" uid="uid://iyq0t7e2gkjk" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (12)3.png" id="3_sr2rx"]
+[ext_resource type="Texture2D" uid="uid://bbyg4du00ui2u" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (12)4.png" id="4_wf8sd"]
+[ext_resource type="Texture2D" uid="uid://5w4f2gpuwynh" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (12)5.png" id="5_xor5s"]
+[ext_resource type="Texture2D" uid="uid://dj2pub2ngm5np" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (12)6.png" id="6_qd21b"]
+[ext_resource type="Texture2D" uid="uid://b5a8imox04513" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (12)7.png" id="7_je6p6"]
+[ext_resource type="Texture2D" uid="uid://0phpenuto7un" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (12)8.png" id="8_33sme"]
+[ext_resource type="Texture2D" uid="uid://meblxfkp4cse" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (12)9.png" id="9_ccno4"]
+[ext_resource type="Texture2D" uid="uid://bmfvspp88y7ng" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (12)10.png" id="10_uytu8"]
+[ext_resource type="Texture2D" uid="uid://b470mf1y46sck" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (12)11.png" id="11_diver"]
+[ext_resource type="Texture2D" uid="uid://dd84vq2eosuaf" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (12)12.png" id="12_n6f0y"]
+[ext_resource type="Texture2D" uid="uid://b3ih1gg2c0dgm" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (12)13.png" id="13_bi16g"]
+[ext_resource type="Texture2D" uid="uid://cm0akpblu04g" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (12)14.png" id="14_smh7g"]
+[ext_resource type="Texture2D" uid="uid://cndxf1vcstq5t" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (12)15.png" id="15_cioir"]
+[ext_resource type="Texture2D" uid="uid://dmygsixw45rxe" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (12)16.png" id="16_lg1wd"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_dpfsm"]
+atlas = ExtResource("1_b6m8o")
+region = Rect2(0, 0, 96, 96)
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_dpfsm")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_be8lc")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_sr2rx")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_wf8sd")
+}, {
+"duration": 1.0,
+"texture": ExtResource("5_xor5s")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_qd21b")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_je6p6")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_33sme")
+}, {
+"duration": 1.0,
+"texture": ExtResource("9_ccno4")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10_uytu8")
+}, {
+"duration": 1.0,
+"texture": ExtResource("11_diver")
+}, {
+"duration": 1.0,
+"texture": ExtResource("12_n6f0y")
+}, {
+"duration": 1.0,
+"texture": ExtResource("13_bi16g")
+}, {
+"duration": 1.0,
+"texture": ExtResource("14_smh7g")
+}, {
+"duration": 1.0,
+"texture": ExtResource("15_cioir")
+}, {
+"duration": 1.0,
+"texture": ExtResource("16_lg1wd")
+}],
+"loop": false,
+"name": &"summon",
+"speed": 12.0
+}]

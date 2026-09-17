@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemy_projectile.gd" id="1_projectile"]
+[ext_resource type="SpriteFrames" path="res://data/vfx/mushroom_spell_projectile_frames.tres" id="2_frames"]
+
+[node name="MushroomSpellProjectile" type="CharacterBody2D"]
+collision_layer = 0
+collision_mask = 1
+script = ExtResource("1_projectile")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+sprite_frames = ExtResource("2_frames")
+animation = &"travel"
+autoplay = &"travel"

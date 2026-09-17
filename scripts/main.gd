@@ -6,6 +6,7 @@ const DEFAULT_ROOM_SCENE := preload("res://rooms/graph_room.tscn")
 const DEFAULT_ENEMY_SCENE := preload("res://enemies/bone_scout_enemy.tscn")
 const TRAINING_DUMMY_2_SCENE := preload("res://enemies/training_dummy_2.tscn")
 const GOBLIN_BARREL_SCENE := preload("res://enemies/goblin_barrel.tscn")
+const SORCERER_SUMMON_EFFECT := preload("res://effects/sorcerer_summon_effect.tscn")
 const ENCOUNTER_CATALOGUE := preload("res://data/encounters/encounter_catalogue.tres")
 const SAVE_FILE_PATH := "user://savegame.cfg"
 const REST_SHOP_SETTINGS = preload("res://data/ui/rest_shop_settings.tres")
@@ -123,6 +124,7 @@ const FINAL_WAVE_BREAK_SECONDS: float = 2.0
 
 func _process(delta: float) -> void:
 	_process_final_wave_break(delta)
+	_process_stage2_summon_warning(delta)
 
 
 #start
@@ -487,6 +489,12 @@ func ensure_stage_room_shape(room_data: Dictionary) -> Dictionary:
 		room_data["wave_warning_visible"] = false
 	if not room_data.has("wave_spawn_pending"):
 		room_data["wave_spawn_pending"] = false
+	if not room_data.has("summon_warning_remaining"):
+		room_data["summon_warning_remaining"] = 0.0
+	if not room_data.has("pending_summon_count"):
+		room_data["pending_summon_count"] = 0
+	if not room_data.has("pending_summoner_id"):
+		room_data["pending_summoner_id"] = ""
 	if not room_data.has("is_modified_combat"):
 		room_data["is_modified_combat"] = false
 	if not room_data.has("debuff_offered_ids"):
@@ -1386,6 +1394,9 @@ func build_stage_rooms_from_positions(grid_positions: Array[Vector2i]) -> Array[
 		"wave_break_remaining": 0.0,
 		"wave_warning_visible": false,
 		"wave_spawn_pending": false,
+		"summon_warning_remaining": 0.0,
+		"pending_summon_count": 0,
+		"pending_summoner_id": "",
 		"is_modified_combat": false,
 		"debuff_offered_ids": [],
 		"debuff_selected_id": "",
@@ -2390,6 +2401,8 @@ func get_encounter_count_for_generation(room_data: Dictionary, max_spawn_count: 
 	if int(room_data.get("enemies_remaining", 0)) > 0:
 		return maxi(int(room_data["enemies_remaining"]), 0)
 	if str(room_data.get("encounter_kind", "")) == "major_boss":
+		if current_stage == 6:
+			return mini(5, max_spawn_count)
 		var boss_support := encounter_catalogue.get_boss_support_policy(current_stage)
 		if not boss_support.is_empty():
 			return mini(int(boss_support.get("initial_count", 0)) + 1, max_spawn_count)
@@ -2407,6 +2420,8 @@ func get_encounter_entries(room_data: Dictionary) -> Array[Dictionary]:
 
 
 func resolve_encounter_scene(record: Dictionary) -> PackedScene:
+	if str(record.get("enemy_id", "")) == "ent":
+		return load("res://enemies/ent_lvl2.tscn") as PackedScene
 	var scene_path := str(record.get("scene_path", ""))
 	if not scene_path.is_empty():
 		var loaded_scene := load(scene_path) as PackedScene
@@ -2501,6 +2516,10 @@ func spawn_room_enemies(room_id: int) -> void:
 				enemy.restore_summon_progress(get_completed_sorcerer_waves(room_data, str(record.get("instance_id", ""))))
 			enemy.summon_wave_requested.connect(
 				_on_sorcerer_summon_wave_requested.bind(room_id, str(record.get("instance_id", "")))
+			)
+		if enemy.has_signal("summon_requested"):
+			enemy.summon_requested.connect(
+				_on_stage2_summon_requested.bind(room_id, str(record.get("instance_id", "")))
 			)
 	if room_data.get("encounter_format", "") == "fixed_final_waves":
 		room_data["encounter_status"] = "Wave %d/%d active" % [int(room_data.get("current_wave", 1)), int(room_data.get("wave_total", 1))]
@@ -2597,7 +2616,7 @@ func _on_sorcerer_summon_wave_requested(wave_number: int, room_id: int, sorcerer
 	var goblin_count := int(policy.get("goblin_count", 0))
 	var goblin_scene := policy.get("goblin_scene") as PackedScene
 	if not goblin_enemy_id.is_empty() and goblin_count > 0 and goblin_scene != null:
-		spawn_summoned_enemies(room_id, sorcerer_id, wave_number, goblin_enemy_id, goblin_count, goblin_scene)
+		spawn_summoned_enemies(room_id, sorcerer_id, wave_number, goblin_enemy_id, goblin_count, goblin_scene, true)
 
 
 func spawn_summoned_enemies(
@@ -2606,7 +2625,8 @@ func spawn_summoned_enemies(
 	wave_number: int,
 	enemy_id: String,
 	spawn_count: int,
-	scene: PackedScene
+	scene: PackedScene,
+	with_summon_effect: bool = false
 ) -> void:
 	var room_data: Dictionary = get_room_data_by_id(room_id)
 	var room_node: StageRoom = get_room_node(room_id)
@@ -2646,12 +2666,20 @@ func spawn_summoned_enemies(
 		var base_position := spawn_positions[summon_offset % spawn_positions.size()]
 		var offset := Vector2(-10.0 if summon_offset % 2 == 0 else 10.0, -8.0)
 		summoned_enemy.global_position = base_position + offset
+		if with_summon_effect:
+			_spawn_summon_effect_at(summoned_enemy.global_position)
 		summoned_enemy.set_meta("room_id", room_id)
 		summoned_enemy.set_meta("encounter_enemy_id", str(summon_record["instance_id"]))
 		summoned_enemy.set_meta("catalogue_enemy_id", enemy_id)
 		register_enemy_presentation(summoned_enemy, summon_record)
 		var enemy_health: HealthComponent = summoned_enemy.get_node("Health")
 		enemy_health.died.connect(_on_room_enemy_died.bind(room_id, str(summon_record["instance_id"])))
+
+
+func _spawn_summon_effect_at(spawn_position: Vector2) -> void:
+	var effect := SORCERER_SUMMON_EFFECT.instantiate()
+	enemy_container.add_child(effect)
+	effect.global_position = spawn_position
 
 
 func get_completed_sorcerer_waves(room_data: Dictionary, sorcerer_id: String) -> int:
@@ -3067,6 +3095,62 @@ func _process_final_wave_break(delta: float) -> void:
 	call_deferred("spawn_room_enemies", current_room_id)
 
 
+func _on_stage2_summon_requested(requested_count: int, room_id: int, summoner_id: String) -> void:
+	var room_data := get_room_data_by_id(room_id)
+	if room_data.is_empty() or room_id != current_room_id or room_data.get("completed", false):
+		return
+	var living_frogs := 0
+	for record: Variant in room_data.get("encounter_enemy_records", []):
+		if record is Dictionary and str(record.get("enemy_id", "")) == "frog_monster" and not bool(record.get("defeated", false)):
+			living_frogs += 1
+	var pending := int(room_data.get("pending_summon_count", 0))
+	var allowed := mini(maxi(requested_count, 0), maxi(4 - living_frogs - pending, 0))
+	if allowed <= 0:
+		return
+	room_data["pending_summon_count"] = allowed
+	room_data["pending_summoner_id"] = summoner_id
+	room_data["summon_warning_remaining"] = 1.0
+	room_data["encounter_status"] = "Frog reinforcements incoming in 1.0s"
+	set_room_data_by_id(room_data)
+	var room_node := get_room_node(room_id)
+	if room_node != null:
+		room_node.set_room_label(str(room_data["encounter_status"]))
+	if run_active:
+		save_progress()
+
+
+func _process_stage2_summon_warning(delta: float) -> void:
+	if not run_active or current_room_id < 0:
+		return
+	var room_data := get_current_room_data()
+	var remaining := float(room_data.get("summon_warning_remaining", 0.0))
+	if remaining <= 0.0:
+		return
+	remaining = maxf(remaining - delta, 0.0)
+	room_data["summon_warning_remaining"] = remaining
+	if remaining > 0.0:
+		room_data["encounter_status"] = "Frog reinforcements incoming in %.1fs" % remaining
+		set_room_data_by_id(room_data)
+		var room_node := get_room_node(current_room_id)
+		if room_node != null:
+			room_node.set_room_label(str(room_data["encounter_status"]))
+		return
+	var summoner_id := str(room_data.get("pending_summoner_id", ""))
+	var summoner := get_room_enemy_by_encounter_id(current_room_id, summoner_id)
+	var living_frogs := 0
+	for record: Variant in room_data.get("encounter_enemy_records", []):
+		if record is Dictionary and str(record.get("enemy_id", "")) == "frog_monster" and not bool(record.get("defeated", false)):
+			living_frogs += 1
+	var count := mini(int(room_data.get("pending_summon_count", 0)), maxi(4 - living_frogs, 0))
+	room_data["pending_summon_count"] = 0
+	room_data["pending_summoner_id"] = ""
+	if summoner == null or count <= 0 or room_data.get("completed", false):
+		set_room_data_by_id(room_data)
+		return
+	set_room_data_by_id(room_data)
+	spawn_summoned_enemies(current_room_id, summoner_id, int(Time.get_ticks_msec()), "frog_monster", count, load("res://enemies/frog_monster.tscn") as PackedScene)
+
+
 func _on_sorcerer_summon_group_cleared(room_id: int, sorcerer_id: String, wave_number: int) -> void:
 	var room_data: Dictionary = get_room_data_by_id(room_id)
 	if room_data.is_empty() or wave_number <= 0 or room_data.get("completed", false) or current_room_id != room_id:
@@ -3091,7 +3175,7 @@ func _on_sorcerer_summon_group_cleared(room_id: int, sorcerer_id: String, wave_n
 	var support_count := int(policy.get("after_wave_count", 0))
 	var support_scene := policy.get("scene") as PackedScene
 	if not support_enemy_id.is_empty() and support_count > 0 and support_scene != null:
-		spawn_summoned_enemies(room_id, sorcerer_id, wave_number, support_enemy_id, support_count, support_scene)
+		spawn_summoned_enemies(room_id, sorcerer_id, wave_number, support_enemy_id, support_count, support_scene, true)
 	if sorcerer.has_method("notify_summon_wave_cleared"):
 		sorcerer.notify_summon_wave_cleared(wave_number)
 

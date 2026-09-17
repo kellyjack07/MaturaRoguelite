@@ -12,6 +12,13 @@
 [ext_resource type="PackedScene" path="res://enemies/orc_archer_red.tscn" id="11_orc_archer_red"]
 [ext_resource type="PackedScene" path="res://enemies/orc_barbare_blue.tscn" id="12_orc_barbare_blue"]
 [ext_resource type="PackedScene" path="res://enemies/orc_barbare_red.tscn" id="13_orc_barbare_red"]
+[ext_resource type="PackedScene" path="res://enemies/frog_monster.tscn" id="14_frog_monster"]
+[ext_resource type="PackedScene" path="res://enemies/ent_lvl1.tscn" id="15_ent_lvl1"]
+[ext_resource type="PackedScene" path="res://enemies/ent_lvl2.tscn" id="16_ent_lvl2"]
+[ext_resource type="PackedScene" path="res://enemies/ent_lvl3.tscn" id="17_ent_lvl3"]
+[ext_resource type="PackedScene" path="res://enemies/mushroom.tscn" id="18_mushroom"]
+[ext_resource type="PackedScene" uid="uid://ynejacecw2ky" path="res://enemies/cyclop_archer.tscn" id="19_cyclop_archer"]
+[ext_resource type="PackedScene" path="res://enemies/frog_boss.tscn" id="20_frog_boss"]
 
 [resource]
 script = ExtResource("1_catalogue")
@@ -308,73 +315,192 @@ stage_settings = {
 "4": {
 "boss_roster": [{
 "enemy_id": "frog_boss",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("20_frog_boss")
 }],
 "final_challenge_encounter_id": "stage_4_final_challenge",
 "final_roster": [{
 "enemy_id": "frog_monster",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("14_frog_monster")
 }, {
 "enemy_id": "mushroom",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("18_mushroom")
 }],
+"final_waves": [[{
+"enemy_id": "frog_monster",
+"implemented": true,
+"scene": ExtResource("14_frog_monster")
+}, {
+"enemy_id": "frog_monster",
+"implemented": true,
+"scene": ExtResource("14_frog_monster")
+}, {
+"enemy_id": "ent_lvl1",
+"implemented": true,
+"scene": ExtResource("15_ent_lvl1")
+}], [{
+"enemy_id": "frog_monster",
+"implemented": true,
+"scene": ExtResource("14_frog_monster")
+}, {
+"enemy_id": "ent_lvl1",
+"implemented": true,
+"scene": ExtResource("15_ent_lvl1")
+}, {
+"enemy_id": "mushroom",
+"implemented": true,
+"scene": ExtResource("18_mushroom")
+}], [{
+"enemy_id": "frog_monster",
+"implemented": true,
+"scene": ExtResource("14_frog_monster")
+}, {
+"enemy_id": "mushroom",
+"implemented": true,
+"scene": ExtResource("18_mushroom")
+}, {
+"enemy_id": "ent_lvl2",
+"implemented": true,
+"scene": ExtResource("16_ent_lvl2")
+}]],
 "major_boss_encounter_id": "frog_boss",
 "regular_roster": [{
 "enemy_id": "frog_monster",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("14_frog_monster")
+}, {
+"enemy_id": "ent_lvl1",
+"implemented": true,
+"scene": ExtResource("15_ent_lvl1")
 }, {
 "enemy_id": "mushroom",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("18_mushroom")
 }]
 },
 "5": {
 "boss_roster": [{
 "enemy_id": "frog_boss",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("20_frog_boss")
 }],
 "final_challenge_encounter_id": "stage_5_final_challenge",
 "final_roster": [{
-"enemy_id": "ent",
-"implemented": false
+"enemy_id": "ent_lvl2",
+"implemented": true,
+"scene": ExtResource("16_ent_lvl2")
 }, {
 "enemy_id": "mushroom",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("18_mushroom")
 }],
+"final_waves": [[{
+"enemy_id": "ent_lvl2",
+"implemented": true,
+"scene": ExtResource("16_ent_lvl2")
+}, {
+"enemy_id": "ent_lvl2",
+"implemented": true,
+"scene": ExtResource("16_ent_lvl2")
+}, {
+"enemy_id": "mushroom",
+"implemented": true,
+"scene": ExtResource("18_mushroom")
+}], [{
+"enemy_id": "ent_lvl2",
+"implemented": true,
+"scene": ExtResource("16_ent_lvl2")
+}, {
+"enemy_id": "frog_monster",
+"implemented": true,
+"scene": ExtResource("14_frog_monster")
+}, {
+"enemy_id": "mushroom",
+"implemented": true,
+"scene": ExtResource("18_mushroom")
+}, {
+"enemy_id": "mushroom",
+"implemented": true,
+"scene": ExtResource("18_mushroom")
+}], [{
+"enemy_id": "ent_lvl3",
+"implemented": true,
+"scene": ExtResource("17_ent_lvl3")
+}, {
+"enemy_id": "ent_lvl2",
+"implemented": true,
+"scene": ExtResource("16_ent_lvl2")
+}, {
+"enemy_id": "mushroom",
+"implemented": true,
+"scene": ExtResource("18_mushroom")
+}]],
 "major_boss_encounter_id": "frog_boss",
 "regular_roster": [{
-"enemy_id": "ent",
-"implemented": false
+"enemy_id": "ent_lvl2",
+"implemented": true,
+"scene": ExtResource("16_ent_lvl2")
+}, {
+"enemy_id": "frog_monster",
+"implemented": true,
+"scene": ExtResource("14_frog_monster")
 }, {
 "enemy_id": "mushroom",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("18_mushroom")
 }]
 },
 "6": {
 "boss_roster": [{
 "enemy_id": "frog_boss",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("20_frog_boss")
+}, {
+"enemy_id": "ent_lvl3",
+"implemented": true,
+"scene": ExtResource("17_ent_lvl3")
+}, {
+"enemy_id": "ent_lvl3",
+"implemented": true,
+"scene": ExtResource("17_ent_lvl3")
+}, {
+"enemy_id": "mushroom",
+"implemented": true,
+"scene": ExtResource("18_mushroom")
+}, {
+"enemy_id": "cyclop_archer",
+"implemented": true,
+"scene": ExtResource("19_cyclop_archer")
 }],
 "final_challenge_encounter_id": "stage_6_final_challenge",
 "final_roster": [{
-"enemy_id": "ent",
-"implemented": false
+"enemy_id": "ent_lvl3",
+"implemented": true,
+"scene": ExtResource("17_ent_lvl3")
 }, {
 "enemy_id": "cyclop_archer",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("19_cyclop_archer")
 }],
 "major_boss_encounter_id": "frog_boss",
 "regular_roster": [{
-"enemy_id": "ent",
-"implemented": false
+"enemy_id": "ent_lvl3",
+"implemented": true,
+"scene": ExtResource("17_ent_lvl3")
 }, {
 "enemy_id": "frog_monster",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("14_frog_monster")
 }, {
 "enemy_id": "mushroom",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("18_mushroom")
 }, {
 "enemy_id": "cyclop_archer",
-"implemented": false
+"implemented": true,
+"scene": ExtResource("19_cyclop_archer")
 }]
 },
 "7": {

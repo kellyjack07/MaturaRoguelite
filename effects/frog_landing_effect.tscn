@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://cd6f5vn3f5tar"]
+
+[ext_resource type="Script" path="res://scripts/frog_landing_effect.gd" id="1_script"]
+[ext_resource type="SpriteFrames" path="res://data/vfx/frog_landing_effect_frames.tres" id="2_frames"]
+
+[node name="FrogLandingEffect" type="Node2D" unique_id=184005401]
+z_index = 4
+script = ExtResource("1_script")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1808187695]
+sprite_frames = ExtResource("2_frames")
+animation = &"landing"
+frame = 7
+frame_progress = 1.0

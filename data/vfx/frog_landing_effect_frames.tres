@@ -1,0 +1,74 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://3mj0mr1aadn7"]
+
+[ext_resource type="Texture2D" uid="uid://qc7a8pcb7oi" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (5)1.png" id="1_effect_sheet"]
+[ext_resource type="Texture2D" uid="uid://cnqlrqsj1ujou" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (5)2.png" id="2_vt0js"]
+[ext_resource type="Texture2D" uid="uid://dm7j0dnl4r640" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (5)3.png" id="3_fl851"]
+[ext_resource type="Texture2D" uid="uid://w3j8hndq1d2p" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (5)4.png" id="4_i4bna"]
+[ext_resource type="Texture2D" uid="uid://b6f8vjerxiujr" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (5)5.png" id="5_t0ay7"]
+[ext_resource type="Texture2D" uid="uid://b1pvdh47b6qmo" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (5)6.png" id="6_yqsp2"]
+[ext_resource type="Texture2D" uid="uid://cbkfj5wqybljc" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (5)7.png" id="7_ovnwi"]
+[ext_resource type="Texture2D" uid="uid://ccnvogkwb1dje" path="res://assets/ParticleEffects/Combat Effects – 2D Pixel Art VFX Pack 3/PNG/Effect (5)8.png" id="8_qmrri"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_6y0my"]
+atlas = ExtResource("1_effect_sheet")
+region = Rect2(0, 0, 96, 96)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_k811x"]
+atlas = ExtResource("2_vt0js")
+region = Rect2(0, 0, 96, 96)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wow6m"]
+atlas = ExtResource("3_fl851")
+region = Rect2(0, 0, 96, 96)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_s3jjw"]
+atlas = ExtResource("4_i4bna")
+region = Rect2(0, 0, 96, 96)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_w7y1x"]
+atlas = ExtResource("5_t0ay7")
+region = Rect2(0, 0, 96, 96)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_tfuap"]
+atlas = ExtResource("6_yqsp2")
+region = Rect2(0, 0, 96, 96)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_006ki"]
+atlas = ExtResource("7_ovnwi")
+region = Rect2(0, 0, 96, 96)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_be7hl"]
+atlas = ExtResource("8_qmrri")
+region = Rect2(0, 0, 96, 96)
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_6y0my")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_k811x")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_wow6m")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_s3jjw")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_w7y1x")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_tfuap")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_006ki")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_be7hl")
+}],
+"loop": false,
+"name": &"landing",
+"speed": 12.0
+}]
