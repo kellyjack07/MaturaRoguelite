@@ -54,6 +54,13 @@ func _configure_default_health_presentation() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	# During room changes/death cleanup an enemy can receive one final physics
+	# tick after its body has left the active physics space. Do not call
+	# move_and_slide() without a valid world, or Godot reports body->get_space()
+	# as null.
+	if not is_inside_tree() or get_world_2d() == null:
+		return
+
 	if hit_stun_timer > 0.0:
 		hit_stun_timer -= delta
 		velocity = knockback_velocity
@@ -67,6 +74,8 @@ func _physics_process(delta: float) -> void:
 		return
 
 	update_behavior(delta)
+	if not is_inside_tree() or get_world_2d() == null:
+		return
 	move_and_slide()
 
 
@@ -127,14 +136,30 @@ func has_animation(animation_name: StringName) -> bool:
 	return animated_sprite.sprite_frames != null and animated_sprite.sprite_frames.has_animation(animation_name)
 
 
+func get_authored_animation_duration(animation_name: StringName, fallback: float) -> float:
+	if not has_animation(animation_name):
+		return maxf(fallback, 0.01)
+	var frames := animated_sprite.sprite_frames
+	var frame_count := frames.get_frame_count(animation_name)
+	var speed := frames.get_animation_speed(animation_name)
+	if frame_count <= 0 or speed <= 0.0:
+		return maxf(fallback, 0.01)
+	var duration := 0.0
+	for frame_index in frame_count:
+		duration += frames.get_frame_duration(animation_name, frame_index)
+	return maxf(duration / speed, 0.01)
+
+
 func play_animation_if_exists(animation_name: StringName) -> bool:
 	if not has_animation(animation_name):
 		return false
 
 	if animated_sprite.animation != animation_name:
 		animated_sprite.play(animation_name)
-	elif not animated_sprite.is_playing():
-		animated_sprite.play()
+	# State update methods run every physics tick. Do not restart a completed
+	# authored clip here; state transitions select a different animation and
+	# start it once. This preserves editor loop settings and avoids visible
+	# per-tick animation resets.
 	return true
 
 

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="EndRunPayoutSettings" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/end_run_payout_settings.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+first_ever_level_essence = 10
+repeat_level_essence = 10
+complete_stage_essence = 30
+regular_kills_per_essence = 8
+regular_kill_essence = 1
+designated_boss_essence = 2
+gold_per_essence = 5
+gold_conversion_essence = 1

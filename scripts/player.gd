@@ -607,11 +607,9 @@ func set_potion_inventory_snapshot(snapshot: Dictionary) -> void:
 func apply_hit_reaction(_from_position: Vector2, _damage: int) -> void:
 	if action_state == ActionState.DEAD or health_component.is_dead():
 		return
-	cancel_transient_actions(true)
-	action_state = ActionState.HURT
-	hurt_time_left = 0.4
-	var hurt_animation: StringName = equipped_weapon.get_animation("hurt")
-	play_animation(hurt_animation, move_direction, true)
+	# Taking damage is feedback only. It must not cancel an active attack,
+	# dash, spear lunge, or hammer movement lock; those are gameplay actions
+	# with their own authoritative timing.
 	play_invulnerability_blink()
 	debug_state_changed.emit()
 

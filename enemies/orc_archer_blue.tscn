@@ -1,4 +1,13 @@
 [gd_scene format=3]
 [ext_resource type="PackedScene" path="res://enemies/orc_archer.tscn" id="1"]
+[ext_resource type="SpriteFrames" path="res://data/enemy_frames_orc_archer_blue.tres" id="2"]
 [node name="OrcArcherBlue" instance=ExtResource("1")]
 skin_variant = 2
+difficulty_weight = 1.4
+enemy_max_health = 25
+enemy_damage = 6
+move_speed = 42.0
+recovery_duration = 0.9
+projectile_speed = 190.0
+[node name="AnimatedSprite2D" parent="." index="0"]
+sprite_frames = ExtResource("2")

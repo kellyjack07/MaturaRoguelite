@@ -11,6 +11,8 @@ const SAVE_FILE_PATH := "user://savegame.cfg"
 const REST_SHOP_SETTINGS = preload("res://data/ui/rest_shop_settings.tres")
 const STAMINA_BOTTLE_COST: int = 5
 const POTION_CATALOGUE = preload("res://data/player/potion_catalogue.tres")
+const END_RUN_PAYOUT_SETTINGS: EndRunPayoutSettings = preload("res://data/progression/end_run_payout_settings.tres")
+const DEBUFF_CATALOGUE: DebuffCatalogue = preload("res://data/progression/debuff_catalogue.tres")
 
 enum RoomType {
 	START,
@@ -27,6 +29,7 @@ enum RoomEventType {
 	BOSS_CHEST_REWARD,
 	REWARD_CHOICE,
 	DEBUFF_NOTICE,
+	DEBUFF_CHOICE,
 }
 
 @export var available_room_scenes: Array[PackedScene] = [DEFAULT_ROOM_SCENE]
@@ -52,6 +55,9 @@ enum RoomEventType {
 @onready var stamina_component: StaminaComponent = $Player/Stamina
 @onready var potion_inventory: PotionInventory = $Player/PotionInventory
 @onready var death_screen: Control = $UI/DeathScreen
+@onready var death_summary_label: Label = $UI/DeathScreen/SummaryLabel
+@onready var death_payout_status_label: Label = $UI/DeathScreen/PayoutStatusLabel
+@onready var death_retry_payout_button: Button = $UI/DeathScreen/RetryPayoutButton
 @onready var stage_transition_screen: Control = $UI/StageTransitionScreen
 @onready var stage_transition_label: Label = $UI/StageTransitionScreen/StageTransitionLabel
 @onready var room_event_screen: Control = $UI/RoomEventScreen
@@ -110,6 +116,13 @@ var stage_room_nodes: Dictionary = {}
 var hallway_container: Node2D = null
 var dev_tools_enabled: bool = false
 var dev_menu_previous_pause_state: bool = false
+var pending_end_run_result: Dictionary = {}
+var end_run_payout_committed: bool = false
+const FINAL_WAVE_BREAK_SECONDS: float = 2.0
+
+
+func _process(delta: float) -> void:
+	_process_final_wave_break(delta)
 
 
 #start
@@ -173,6 +186,7 @@ func connect_ui_signals() -> void:
 	$UI/PauseMenuScreen/Panel/SaveQuitButton.pressed.connect(save_and_quit_game)
 	$UI/PauseMenuScreen/Panel/MainMenuButton.pressed.connect(return_to_main_menu)
 	$UI/DeathScreen/MainMenuButton.pressed.connect(return_to_main_menu)
+	death_retry_payout_button.pressed.connect(_retry_end_run_payout)
 	room_event_primary_button.pressed.connect(_on_room_event_primary_button_pressed)
 	room_event_secondary_button.pressed.connect(_on_room_event_secondary_button_pressed)
 	room_event_tertiary_button.pressed.connect(_on_room_event_tertiary_button_pressed)
@@ -297,7 +311,7 @@ func ensure_developer_input_action() -> void:
 #save/load
 func get_default_meta_progression() -> Dictionary:
 	return {
-		"essence": 100,
+		"essence": 0,
 		"highest_stage_completed": 0,
 		"skill_tree_version": 1,
 		"purchased_skill_nodes": [],
@@ -339,6 +353,9 @@ func get_default_meta_progression() -> Dictionary:
 		"settings": {
 			"master_volume": 0.8,
 		},
+		"completed_level_history": [],
+		"credited_run_ids": [],
+		"last_run_result": {},
 	}
 
 
@@ -348,6 +365,9 @@ func get_default_debuff_state() -> Dictionary:
 		"speed_penalty": 0.0,
 		"rest_penalty": 0,
 		"active_names": [],
+		"attack_penalty_multiplier": 0.0,
+		"room_modifier_id": "",
+		"room_id": -1,
 	}
 
 
@@ -382,6 +402,12 @@ func ensure_meta_progression_shape() -> void:
 	for setting_name in defaults["settings"].keys():
 		if not meta_progression["settings"].has(setting_name):
 			meta_progression["settings"][setting_name] = defaults["settings"][setting_name]
+	if not meta_progression.has("completed_level_history"):
+		meta_progression["completed_level_history"] = []
+	if not meta_progression.has("credited_run_ids"):
+		meta_progression["credited_run_ids"] = []
+	if not meta_progression.has("last_run_result"):
+		meta_progression["last_run_result"] = {}
 
 
 func ensure_current_run_shape() -> void:
@@ -410,6 +436,20 @@ func ensure_current_run_shape() -> void:
 		for key in default_debuff_state.keys():
 			if not current_run["debuff_state"].has(key):
 				current_run["debuff_state"][key] = default_debuff_state[key]
+	if not current_run.has("run_id"):
+		current_run["run_id"] = "legacy-%d" % abs(hash(current_run))
+	if not current_run.has("completed_levels"):
+		current_run["completed_levels"] = []
+	if not current_run.has("regular_kills"):
+		current_run["regular_kills"] = 0
+	if not current_run.has("boss_kills"):
+		current_run["boss_kills"] = 0
+	if not current_run.has("payout_status"):
+		current_run["payout_status"] = "active"
+	if not current_run.has("payout_result"):
+		current_run["payout_result"] = {}
+	if not current_run.has("debuff_bonus_essence"):
+		current_run["debuff_bonus_essence"] = 0
 
 	if not current_run.has("stage_rooms"):
 		return
@@ -433,6 +473,32 @@ func ensure_stage_room_shape(room_data: Dictionary) -> Dictionary:
 		room_data["defeated_enemy_ids"] = []
 	if not room_data.has("encounter_status"):
 		room_data["encounter_status"] = ""
+	if not room_data.has("encounter_format"):
+		room_data["encounter_format"] = ""
+	if not room_data.has("encounter_waves"):
+		room_data["encounter_waves"] = []
+	if not room_data.has("current_wave"):
+		room_data["current_wave"] = 0
+	if not room_data.has("wave_total"):
+		room_data["wave_total"] = 0
+	if not room_data.has("wave_break_remaining"):
+		room_data["wave_break_remaining"] = 0.0
+	if not room_data.has("wave_warning_visible"):
+		room_data["wave_warning_visible"] = false
+	if not room_data.has("wave_spawn_pending"):
+		room_data["wave_spawn_pending"] = false
+	if not room_data.has("is_modified_combat"):
+		room_data["is_modified_combat"] = false
+	if not room_data.has("debuff_offered_ids"):
+		room_data["debuff_offered_ids"] = []
+	if not room_data.has("debuff_selected_id"):
+		room_data["debuff_selected_id"] = ""
+	if not room_data.has("debuff_reward_claimed"):
+		room_data["debuff_reward_claimed"] = false
+	if not room_data.has("debuff_bonus_essence"):
+		room_data["debuff_bonus_essence"] = 0
+	if not room_data.has("debuff_expanded"):
+		room_data["debuff_expanded"] = false
 	if not room_data.has("shop_stock"):
 		var stocked: bool = not room_data.get("completed", false)
 		room_data["shop_stock"] = {"small_healing": stocked, "big_healing": stocked, "stamina": stocked}
@@ -490,6 +556,13 @@ func build_run_snapshot() -> Dictionary:
 		"stamina": player.get_stamina_snapshot(),
 		"potion_inventory": player.get_potion_inventory_snapshot(),
 		"debuff_state": current_run.get("debuff_state", get_default_debuff_state()),
+		"run_id": current_run.get("run_id", ""),
+		"completed_levels": current_run.get("completed_levels", []),
+		"regular_kills": current_run.get("regular_kills", 0),
+		"boss_kills": current_run.get("boss_kills", 0),
+		"payout_status": current_run.get("payout_status", "active"),
+		"payout_result": current_run.get("payout_result", {}),
+		"debuff_bonus_essence": current_run.get("debuff_bonus_essence", 0),
 	}
 
 
@@ -881,6 +954,7 @@ func start_new_run() -> void:
 	current_stage_rooms = []
 	current_run = {
 		"has_saved_run": true,
+		"run_id": _make_run_id(),
 		"stage": 1,
 		"stage_world": 1,
 		"stage_floor": 1,
@@ -888,7 +962,14 @@ func start_new_run() -> void:
 		"weapon": "sword",
 		"weapon_cooldowns": {},
 		"debuff_state": get_default_debuff_state(),
+		"completed_levels": [],
+		"regular_kills": 0,
+		"boss_kills": 0,
+		"payout_status": "active",
+		"payout_result": {},
 	}
+	pending_end_run_result = {}
+	end_run_payout_committed = false
 	apply_run_modifiers()
 	health_component.reset_health()
 	set_run_ui_visible(true)
@@ -956,6 +1037,85 @@ func get_starting_gold() -> int:
 	return meta_progression["gear"]["starter_gold"] * 3
 
 
+func _make_run_id() -> String:
+	return "%d-%d" % [Time.get_unix_time_from_system(), randi()]
+
+
+func _record_level_completion_at_portal() -> void:
+	if not run_active or current_run.is_empty():
+		return
+	var level_id := get_stage_display_text(current_stage)
+	for record: Variant in current_run.get("completed_levels", []):
+		if record is Dictionary and str(record.get("level_id", "")) == level_id:
+			return
+	var history: Array = meta_progression.get("completed_level_history", []).duplicate()
+	var first_clear := not history.has(level_id)
+	var completed_levels: Array = current_run.get("completed_levels", []).duplicate(true)
+	completed_levels.append({
+		"level_id": level_id,
+		"stage_world": get_stage_world_number(),
+		"stage_floor": get_stage_floor_number(),
+		"first_clear": first_clear,
+	})
+	current_run["completed_levels"] = completed_levels
+	if first_clear:
+		history.append(level_id)
+	meta_progression["completed_level_history"] = history
+	if save_progress() != OK:
+		current_run["completed_levels"] = completed_levels.slice(0, completed_levels.size() - 1)
+		if first_clear:
+			history.pop_back()
+			meta_progression["completed_level_history"] = history
+
+
+func _get_current_run_accounting() -> Dictionary:
+	return {
+		"completed_levels": current_run.get("completed_levels", []),
+		"regular_kills": int(current_run.get("regular_kills", 0)),
+		"boss_kills": int(current_run.get("boss_kills", 0)),
+		"leftover_gold": int(current_run.get("gold", 0)),
+		"debuff_bonus_essence": int(current_run.get("debuff_bonus_essence", 0)),
+	}
+
+
+func _apply_end_run_payout() -> bool:
+	var run_id := str(current_run.get("run_id", ""))
+	if run_id.is_empty():
+		return false
+	var credited: Array = meta_progression.get("credited_run_ids", [])
+	if credited.has(run_id):
+		pending_end_run_result = current_run.get("payout_result", meta_progression.get("last_run_result", {}))
+		end_run_payout_committed = true
+		return true
+	var old_meta := meta_progression.duplicate(true)
+	var old_run := current_run.duplicate(true)
+	var result := END_RUN_PAYOUT_SETTINGS.calculate(_get_current_run_accounting())
+	result["run_id"] = run_id
+	result["permanent_balance"] = int(meta_progression.get("essence", 0)) + int(result.get("total_essence", 0))
+	meta_progression["essence"] = result["permanent_balance"]
+	credited = credited.duplicate()
+	credited.append(run_id)
+	meta_progression["credited_run_ids"] = credited
+	meta_progression["last_run_result"] = result.duplicate(true)
+	current_run["payout_status"] = "credited"
+	current_run["payout_result"] = result.duplicate(true)
+	current_run["has_saved_run"] = false
+	if save_progress() != OK:
+		meta_progression = old_meta
+		current_run = old_run
+		pending_end_run_result = {}
+		end_run_payout_committed = false
+		return false
+	pending_end_run_result = result
+	end_run_payout_committed = true
+	return true
+
+
+func _retry_end_run_payout() -> void:
+	if _apply_end_run_payout():
+		_update_death_summary()
+
+
 func restore_room_encounter_states() -> void:
 	for room in current_stage_rooms:
 		var type: RoomType = room["room_type"] as RoomType
@@ -1002,7 +1162,7 @@ func apply_run_modifiers(developer_bypass: bool = false) -> void:
 
 	# Immutable weapon/player bases -> migrated flat value -> weapon multiplier ->
 	# summed character multiplier -> existing flat run debuff -> final clamp/rounding.
-	var character_damage_multiplier := 1.0 + float(stat_profile.get("character_damage_bonus", 0.0))
+	var character_damage_multiplier := (1.0 + float(stat_profile.get("character_damage_bonus", 0.0))) * (1.0 - float(debuff_state.get("attack_penalty_multiplier", 0.0)))
 	var basic_before_debuff := (
 		(float(weapon_definition.basic_attack.base_damage) + float(stat_profile.get("legacy_basic_damage_flat", 0.0)))
 		* (1.0 + float(stat_profile.get("basic_damage_bonus", 0.0)))
@@ -1025,7 +1185,7 @@ func apply_run_modifiers(developer_bypass: bool = false) -> void:
 		bool(stat_profile.get("special_unlocked", false))
 	)
 	player.move_speed = maxf(
-		default_player_move_speed * (1.0 + float(stat_profile.get("character_move_speed_bonus", 0.0))) - speed_penalty,
+		default_player_move_speed * (1.0 + float(stat_profile.get("character_move_speed_bonus", 0.0))) * (1.0 - float(debuff_state.get("walk_speed_multiplier_penalty", 0.0))) - speed_penalty,
 		60.0
 	)
 	var previous_health := health_component.current_health
@@ -1145,7 +1305,7 @@ func start_stage() -> void:
 
 func build_stage_graph() -> Array[Dictionary]:
 	var regular_combat_room_count: int = get_regular_combat_room_count()
-	var debuff_room_count: int = get_stage_debuff_room_count()
+	var debuff_room_count: int = get_stage_debuff_room_count(regular_combat_room_count)
 	var required_path_room_count: int = regular_combat_room_count + reward_rooms_per_stage + rest_rooms_per_stage + 1
 	var required_room_count: int = 1 + required_path_room_count + debuff_room_count
 	var total_room_count: int = max(stage_grid_room_count, required_room_count)
@@ -1218,19 +1378,31 @@ func build_stage_rooms_from_positions(grid_positions: Array[Vector2i]) -> Array[
 			"encounter_generated": false,
 			"encounter_enemy_records": [],
 			"defeated_enemy_ids": [],
-			"encounter_status": "",
+		"encounter_status": "",
+		"encounter_format": "",
+		"encounter_waves": [],
+		"current_wave": 0,
+		"wave_total": 0,
+		"wave_break_remaining": 0.0,
+		"wave_warning_visible": false,
+		"wave_spawn_pending": false,
+		"is_modified_combat": false,
+		"debuff_offered_ids": [],
+		"debuff_selected_id": "",
+		"debuff_reward_claimed": false,
+		"debuff_bonus_essence": 0,
+		"debuff_expanded": false,
 		})
 
 	return stage_rooms
 
 
-func get_stage_debuff_room_count() -> int:
-	if not is_replay_stage():
+func get_stage_debuff_room_count(regular_combat_room_count: int = -1) -> int:
+	# Modifiers unlock only after the stage's final level was historically cleared.
+	if not meta_progression.get("completed_level_history", []).has("%d-3" % get_stage_world_number()):
 		return 0
-
-	var min_debuff_rooms: int = min(replay_debuff_rooms_min, replay_debuff_rooms_max)
-	var max_debuff_rooms: int = max(replay_debuff_rooms_min, replay_debuff_rooms_max)
-	return randi_range(min_debuff_rooms, max_debuff_rooms)
+	var room_count := regular_combat_room_count if regular_combat_room_count >= 0 else get_regular_combat_room_count()
+	return randi_range(floori(float(room_count) / 2.0), ceili(float(room_count) / 2.0))
 
 
 func get_stage_world_number() -> int:
@@ -1579,17 +1751,17 @@ func assign_room_types(stage_rooms: Array[Dictionary], critical_path_ids: Array[
 	for path_room_id in critical_path_ids:
 		critical_room_lookup[int(path_room_id)] = true
 
-	var side_room_ids: Array[int] = []
+	# Debuff rooms are regular combat rooms with a persisted modifier, never
+	# separate empty side rooms. Exclude the first combat and terminal room.
+	var eligible_modified_rooms: Array[int] = []
 	for room_data in stage_rooms:
 		var room_id: int = int(room_data["id"])
-		if critical_room_lookup.has(room_id):
-			continue
-		side_room_ids.append(room_id)
-
-	side_room_ids.shuffle()
-
-	for debuff_index in min(debuff_room_count, side_room_ids.size()):
-		stage_rooms[side_room_ids[debuff_index]]["room_type"] = RoomType.DEBUFF
+		if room_data["room_type"] == RoomType.COMBAT and room_id != first_combat_room_id:
+			eligible_modified_rooms.append(room_id)
+	eligible_modified_rooms.shuffle()
+	var requested_count := clampi(debuff_room_count, 0, eligible_modified_rooms.size())
+	for debuff_index in requested_count:
+		stage_rooms[eligible_modified_rooms[debuff_index]]["is_modified_combat"] = true
 
 
 func instantiate_stage_graph() -> void:
@@ -1845,6 +2017,14 @@ func handle_room_entry(room_data: Dictionary) -> void:
 			room_node.set_room_label("Start Room")
 		RoomType.COMBAT:
 			room_node.hide_stage_exit()
+			if room_data.get("is_modified_combat", false) and str(room_data.get("debuff_selected_id", "")).is_empty():
+				if room_data.get("debuff_offered_ids", []).is_empty():
+					room_data["debuff_offered_ids"] = choose_room_debuff_offers(room_data)
+					room_data["initialized"] = true
+					set_room_data_by_id(room_data)
+					save_progress()
+				show_debuff_choice(room_data)
+				return
 			if room_data.get("combat_cleared", false) and not room_data.get("completed", false):
 				on_combat_room_cleared(int(room_data["id"]))
 			elif not room_data.get("completed", false) and not room_data.get("initialized", false):
@@ -1963,6 +2143,82 @@ func show_debuff_room_event() -> void:
 	)
 
 
+func choose_room_debuff_offers(room_data: Dictionary) -> Array[String]:
+	var eligible := DEBUFF_CATALOGUE.eligible(get_stage_floor_number(), get_encounter_entries(room_data))
+	var selected: Array[DebuffDefinition] = []
+	for tier in [1, 2, 3]:
+		var tier_candidates := eligible.filter(func(definition: DebuffDefinition) -> bool: return definition.tier == tier)
+		if not tier_candidates.is_empty():
+			selected.append(tier_candidates.pick_random())
+	for definition in eligible:
+		if selected.size() >= 3 or selected.has(definition):
+			continue
+		selected.append(definition)
+	var ids: Array[String] = []
+	for definition in selected:
+		ids.append(definition.id)
+	return ids
+
+
+func show_debuff_choice(room_data: Dictionary) -> void:
+	var ids: Array = room_data.get("debuff_offered_ids", [])
+	var definitions: Array[DebuffDefinition] = []
+	for id: Variant in ids:
+		var definition := DEBUFF_CATALOGUE.get_definition(str(id))
+		if definition != null:
+			definitions.append(definition)
+	if definitions.is_empty():
+		room_data["is_modified_combat"] = false
+		room_data["initialized"] = false
+		set_room_data_by_id(room_data)
+		handle_room_entry(room_data)
+		return
+	var body_lines: Array[String] = ["Choose one modifier. This choice is mandatory."]
+	for index in definitions.size():
+		body_lines.append("%d. %s — %s — Tier %d (+%d Essence)" % [index + 1, definitions[index].title, definitions[index].description, definitions[index].tier, int(DEBUFF_CATALOGUE.tier_essence.get(definitions[index].tier, definitions[index].tier))])
+	show_room_event("Modified Combat", "\n".join(body_lines), definitions[0].title, RoomEventType.DEBUFF_CHOICE, definitions[1].title if definitions.size() > 1 else "", definitions[2].title if definitions.size() > 2 else "")
+
+
+func _select_debuff_choice(index: int) -> void:
+	var room := get_room_data_by_id(current_room_id)
+	if room.is_empty() or not room.get("is_modified_combat", false) or not str(room.get("debuff_selected_id", "")).is_empty():
+		return
+	var ids: Array = room.get("debuff_offered_ids", [])
+	if index < 0 or index >= ids.size():
+		return
+	var definition := DEBUFF_CATALOGUE.get_definition(str(ids[index]))
+	if definition == null:
+		return
+	room["debuff_selected_id"] = definition.id
+	room["debuff_bonus_essence"] = int(DEBUFF_CATALOGUE.tier_essence.get(definition.tier, definition.tier))
+	set_room_data_by_id(room)
+	if save_progress() != OK:
+		room["debuff_selected_id"] = ""
+		room["debuff_reward_claimed"] = false
+		set_room_data_by_id(room)
+		room_event_status_label.text = "Could not save this choice. Please try again."
+		return
+	_apply_room_debuff(definition, room)
+	hide_room_event()
+	room["initialized"] = true
+	set_room_data_by_id(room)
+	call_deferred("spawn_room_enemies", current_room_id)
+
+
+func _apply_room_debuff(definition: DebuffDefinition, room_data: Dictionary) -> void:
+	var state: Dictionary = current_run.get("debuff_state", get_default_debuff_state()).duplicate(true)
+	state["room_modifier_id"] = definition.id
+	state["room_id"] = int(room_data["id"])
+	state["active_names"] = [definition.title]
+	if definition.id == "slowness":
+		state["walk_speed_multiplier_penalty"] = definition.effect_value
+	if definition.id == "damage_reduction":
+		state["attack_penalty_multiplier"] = definition.effect_value
+	current_run["debuff_state"] = state
+	apply_run_modifiers(player.developer_combat_bypass)
+
+
+
 func prepare_stage_encounters() -> void:
 	if encounter_catalogue == null:
 		return
@@ -1980,7 +2236,7 @@ func prepare_stage_encounters() -> void:
 		regular_counts[int(room_data["id"])] = count
 		regular_total += count
 
-	var replay_first_stage := current_stage == 1 and int(meta_progression.get("highest_stage_completed", 0)) >= 1
+	var replay_first_stage: bool = current_stage == 1 and meta_progression.get("completed_level_history", []).has("1-1")
 	var current_roster := encounter_catalogue.get_regular_roster(current_stage, replay_first_stage)
 	var previous_roster: Array[Dictionary] = []
 	if get_stage_floor_number() > 1:
@@ -2007,6 +2263,11 @@ func prepare_stage_encounters() -> void:
 			room_data["encounter_kind"] = "regular"
 			room_data["encounter_id"] = encounter_catalogue.get_encounter_id(current_stage, "regular")
 		set_room_data_by_id(room_data)
+		var replay_final_stage: bool = current_stage == 1 and meta_progression.get("completed_level_history", []).has("1-1")
+		var final_waves := encounter_catalogue.get_final_waves(current_stage, replay_final_stage)
+		if room_type == RoomType.BOSS and str(room_data.get("encounter_kind", "")) == "final_challenge" and not final_waves.is_empty():
+			_generate_fixed_final_waves(room_data, final_waves)
+			continue
 		var max_count := room_node.get_enemy_spawn_positions().size()
 		var count := get_encounter_count_for_generation(room_data, max_count)
 		var entries := get_encounter_entries(room_data)
@@ -2014,14 +2275,19 @@ func prepare_stage_encounters() -> void:
 			entries = [{"enemy_id": "default_enemy", "implemented": true, "scene": enemy_scene}]
 		var records: Array[Dictionary] = []
 		var pending_ids: Array[String] = []
+		var red_variant_count := 0
 		for enemy_index in count:
 			var entry: Dictionary = entries[enemy_index % entries.size()].duplicate(true)
 			if room_type == RoomType.COMBAT and carryover_left > 0 and not previous_roster.is_empty():
 				entry = previous_roster[previous_entry_index % previous_roster.size()].duplicate(true)
 				previous_entry_index += 1
 				carryover_left -= 1
+			elif room_type == RoomType.COMBAT and current_stage == 3:
+				entry = choose_stage_three_orc_entry(entries, red_variant_count)
 			var implemented := bool(entry.get("implemented", false))
 			var enemy_id := str(entry.get("enemy_id", "unknown_enemy"))
+			if enemy_id.begins_with("red_"):
+				red_variant_count += 1
 			if not implemented and not pending_ids.has(enemy_id):
 				pending_ids.append(enemy_id)
 			var scene_path := ""
@@ -2051,6 +2317,71 @@ func prepare_stage_encounters() -> void:
 		save_progress()
 
 
+func choose_stage_three_orc_entry(entries: Array[Dictionary], red_variant_count: int) -> Dictionary:
+	if current_stage != 3:
+		return entries.pick_random().duplicate(true)
+	var family := "orc_archer" if randf() < 0.5 else "orc_barbare"
+	var colour_roll := randf()
+	var colour := "green" if colour_roll < 0.6 else ("blue" if colour_roll < 0.9 else "red")
+	if colour == "red" and red_variant_count >= 1:
+		colour = "blue"
+	var wanted_id := family if colour == "green" else "%s_%s" % [colour, family]
+	for entry in entries:
+		if str(entry.get("enemy_id", "")) == wanted_id:
+			return entry.duplicate(true)
+	# Keep the family-first selection rule even if a future catalogue omits a
+	# colour preset; fall back to the family's green entry before any other ID.
+	var family_id := family
+	for entry in entries:
+		if str(entry.get("enemy_id", "")) == family_id:
+			return entry.duplicate(true)
+	return entries.pick_random().duplicate(true)
+
+
+func _generate_fixed_final_waves(room_data: Dictionary, waves: Array[Array]) -> void:
+	var records: Array[Dictionary] = []
+	var saved_waves: Array[Array] = []
+	var pending_ids: Array[String] = []
+	for wave_index in waves.size():
+		var wave_ids: Array[String] = []
+		for enemy_index in waves[wave_index].size():
+			var entry: Dictionary = waves[wave_index][enemy_index].duplicate(true)
+			var enemy_id := str(entry.get("enemy_id", "unknown_enemy"))
+			var entry_scene := entry.get("scene") as PackedScene
+			var scene_path := entry_scene.resource_path if entry_scene != null else ""
+			var instance_id := "%s_wave_%d_enemy_%d" % [str(room_data["id"]), wave_index + 1, enemy_index]
+			var implemented := bool(entry.get("implemented", false))
+			if not implemented and not pending_ids.has(enemy_id):
+				pending_ids.append(enemy_id)
+			records.append({
+				"instance_id": instance_id,
+				"enemy_id": enemy_id,
+				"scene_path": scene_path,
+				"implemented": implemented,
+				"defeated": false,
+				"spawned": false,
+				"wave_number": wave_index + 1,
+				"presentation_role": "overhead",
+			})
+			wave_ids.append(instance_id)
+		saved_waves.append(wave_ids)
+	room_data["encounter_enemy_records"] = records
+	room_data["encounter_waves"] = saved_waves
+	room_data["current_wave"] = 1
+	room_data["wave_total"] = waves.size()
+	room_data["wave_break_remaining"] = 0.0
+	room_data["wave_warning_visible"] = false
+	room_data["wave_spawn_pending"] = false
+	room_data["defeated_enemy_ids"] = []
+	room_data["enemies_remaining"] = 0
+	room_data["encounter_generated"] = true
+	room_data["encounter_format"] = "fixed_final_waves"
+	room_data["encounter_status"] = "Pending final wave 1"
+	if not pending_ids.is_empty():
+		room_data["encounter_status"] = "Pending (not implemented): %s" % ", ".join(pending_ids)
+	set_room_data_by_id(room_data)
+
+
 func get_encounter_count_for_generation(room_data: Dictionary, max_spawn_count: int) -> int:
 	if max_spawn_count <= 0:
 		return 0
@@ -2071,7 +2402,7 @@ func get_encounter_entries(room_data: Dictionary) -> Array[Dictionary]:
 		return encounter_catalogue.get_boss_roster(current_stage)
 	if kind == "final_challenge":
 		return encounter_catalogue.get_final_roster(current_stage)
-	var replay_first_stage := current_stage == 1 and int(meta_progression.get("highest_stage_completed", 0)) >= 1
+	var replay_first_stage: bool = current_stage == 1 and meta_progression.get("completed_level_history", []).has("1-1")
 	return encounter_catalogue.get_regular_roster(current_stage, replay_first_stage)
 
 
@@ -2085,6 +2416,8 @@ func resolve_encounter_scene(record: Dictionary) -> PackedScene:
 
 
 func spawn_room_enemies(room_id: int) -> void:
+	if current_room_id != room_id:
+		return
 	var room_node: StageRoom = get_room_node(room_id)
 	if room_node == null:
 		return
@@ -2105,9 +2438,21 @@ func spawn_room_enemies(room_id: int) -> void:
 		prepare_stage_encounters()
 		room_data = get_room_data_by_id(room_id)
 		records = room_data.get("encounter_enemy_records", [])
+	_apply_modified_room_roster(room_data)
+	records = room_data.get("encounter_enemy_records", [])
+	if room_data.get("encounter_format", "") == "fixed_final_waves":
+		if float(room_data.get("wave_break_remaining", 0.0)) > 0.0:
+			return
+		_activate_fixed_final_wave(room_data)
+		records = room_data.get("encounter_enemy_records", [])
 	var alive_records: Array[Dictionary] = []
 	for record: Variant in records:
 		if record is Dictionary and not bool(record.get("defeated", false)):
+			if room_data.get("encounter_format", "") == "fixed_final_waves" and (
+				int(record.get("wave_number", 0)) != int(room_data.get("current_wave", 0))
+				or not bool(record.get("spawned", false))
+			):
+				continue
 			alive_records.append(record)
 	# Saved summons can outnumber physical spawn markers. Reuse marker positions
 	# cyclically so every living record is restored instead of being discarded.
@@ -2117,6 +2462,9 @@ func spawn_room_enemies(room_id: int) -> void:
 	set_room_data_by_id(room_data)
 
 	if enemy_count == 0:
+		if room_data.get("encounter_format", "") == "fixed_final_waves":
+			_handle_fixed_final_wave_empty(room_data)
+			return
 		on_combat_room_cleared(room_id)
 		return
 	var encounter_status := str(room_data.get("encounter_status", ""))
@@ -2138,16 +2486,98 @@ func spawn_room_enemies(room_id: int) -> void:
 		enemy.set_meta("room_id", room_id)
 		enemy.set_meta("encounter_enemy_id", str(record.get("instance_id", "")))
 		enemy.set_meta("catalogue_enemy_id", str(record.get("enemy_id", "")))
+		if room_data.get("encounter_format", "") == "fixed_final_waves":
+			record["spawned"] = true
 		register_enemy_presentation(enemy, record)
+		_apply_modified_enemy_effects(enemy, room_data)
 
 		var enemy_health: HealthComponent = enemy.get_node("Health")
+		if record.has("current_health"):
+			enemy_health.current_health = clampi(int(record.get("current_health", enemy_health.max_health)), 0, enemy_health.max_health)
 		enemy_health.died.connect(_on_room_enemy_died.bind(room_id, str(record.get("instance_id", ""))))
+		enemy_health.damaged.connect(_on_room_enemy_damaged.bind(room_id, str(record.get("instance_id", "")), enemy_health))
 		if enemy.has_signal("summon_wave_requested"):
 			if enemy.has_method("restore_summon_progress"):
 				enemy.restore_summon_progress(get_completed_sorcerer_waves(room_data, str(record.get("instance_id", ""))))
 			enemy.summon_wave_requested.connect(
 				_on_sorcerer_summon_wave_requested.bind(room_id, str(record.get("instance_id", "")))
 			)
+	if room_data.get("encounter_format", "") == "fixed_final_waves":
+		room_data["encounter_status"] = "Wave %d/%d active" % [int(room_data.get("current_wave", 1)), int(room_data.get("wave_total", 1))]
+		set_room_data_by_id(room_data)
+		if run_active:
+			save_progress()
+
+
+func _on_room_enemy_damaged(_amount: int, room_id: int, encounter_enemy_id: String, enemy_health: HealthComponent) -> void:
+	var room_data := get_room_data_by_id(room_id)
+	if room_data.is_empty() or not is_instance_valid(enemy_health):
+		return
+	for record: Variant in room_data.get("encounter_enemy_records", []):
+		if record is Dictionary and str(record.get("instance_id", "")) == encounter_enemy_id:
+			record["current_health"] = enemy_health.current_health
+			break
+	set_room_data_by_id(room_data)
+	if run_active:
+		save_progress()
+
+
+func _activate_fixed_final_wave(room_data: Dictionary) -> void:
+	var current_wave := int(room_data.get("current_wave", 1))
+	var records: Array = room_data.get("encounter_enemy_records", [])
+	var activated := false
+	for record: Variant in records:
+		if not record is Dictionary or int(record.get("wave_number", 0)) != current_wave:
+			continue
+		if not bool(record.get("defeated", false)) and not bool(record.get("spawned", false)):
+			record["spawned"] = true
+			activated = true
+	if activated:
+		room_data["wave_spawn_pending"] = false
+		set_room_data_by_id(room_data)
+
+
+func _handle_fixed_final_wave_empty(room_data: Dictionary) -> void:
+	if int(room_data.get("current_wave", 0)) >= int(room_data.get("wave_total", 0)):
+		on_combat_room_cleared(int(room_data["id"]))
+		return
+	_start_fixed_final_wave_break(room_data)
+
+
+func _apply_modified_room_roster(room_data: Dictionary) -> void:
+	if not room_data.get("is_modified_combat", false) or room_data.get("debuff_expanded", false):
+		return
+	if str(room_data.get("debuff_selected_id", "")) != "more_enemies":
+		return
+	var records: Array = room_data.get("encounter_enemy_records", []).duplicate(true)
+	var base_records := records.duplicate(true)
+	var extra_count := ceili(float(base_records.size()) * 0.4)
+	for extra_index in extra_count:
+		if base_records.is_empty():
+			break
+		var source: Dictionary = base_records[extra_index % base_records.size()].duplicate(true)
+		source["instance_id"] = "%s_modifier_extra_%d" % [str(source.get("instance_id", "enemy")), extra_index]
+		source["defeated"] = false
+		records.append(source)
+	room_data["encounter_enemy_records"] = records
+	room_data["debuff_expanded"] = true
+	room_data["enemies_remaining"] = records.size()
+	set_room_data_by_id(room_data)
+
+
+func _apply_modified_enemy_effects(enemy: Node, room_data: Dictionary) -> void:
+	if not room_data.get("is_modified_combat", false):
+		return
+	var definition := DEBUFF_CATALOGUE.get_definition(str(room_data.get("debuff_selected_id", "")))
+	if definition == null:
+		return
+	if definition.id == "enemy_health":
+		var health := enemy.get_node_or_null("Health") as HealthComponent
+		if health != null:
+			health.max_health = maxi(health.max_health + ceili(float(health.max_health) * definition.effect_value), 1)
+			health.current_health = health.max_health
+	if definition.id == "enemy_haste" and enemy is BaseEnemy:
+		(enemy as BaseEnemy).move_speed *= 1.0 + definition.effect_value
 
 
 func _on_sorcerer_summon_wave_requested(wave_number: int, room_id: int, sorcerer_id: String) -> void:
@@ -2569,7 +2999,10 @@ func _on_room_enemy_died(room_id: int, encounter_enemy_id: String = "") -> void:
 		str(defeated_record.get("presentation_role", "")) == "boss"
 		or str(defeated_record.get("enemy_id", "")) == "sorcerer"
 	):
+		current_run["boss_kills"] = int(current_run.get("boss_kills", 0)) + 1
 		hud.unregister_boss(encounter_enemy_id)
+	elif not defeated_record.is_empty():
+		current_run["regular_kills"] = int(current_run.get("regular_kills", 0)) + 1
 	set_room_data_by_id(room_data)
 	if run_active:
 		save_progress()
@@ -2582,7 +3015,56 @@ func _on_room_enemy_died(room_id: int, encounter_enemy_id: String = "") -> void:
 		)
 
 	if int(room_data["enemies_remaining"]) == 0:
-		on_combat_room_cleared(room_id)
+		if room_data.get("encounter_format", "") == "fixed_final_waves":
+			_handle_fixed_final_wave_empty(room_data)
+		else:
+			on_combat_room_cleared(room_id)
+
+
+func _start_fixed_final_wave_break(room_data: Dictionary) -> void:
+	if float(room_data.get("wave_break_remaining", 0.0)) > 0.0:
+		return
+	room_data["wave_break_remaining"] = FINAL_WAVE_BREAK_SECONDS
+	room_data["wave_warning_visible"] = true
+	room_data["wave_spawn_pending"] = false
+	var next_wave := int(room_data.get("current_wave", 0)) + 1
+	room_data["encounter_status"] = "Wave %d/%d incoming in %.1fs" % [next_wave, int(room_data.get("wave_total", 0)), FINAL_WAVE_BREAK_SECONDS]
+	set_room_data_by_id(room_data)
+	sync_room_doors(room_data)
+	if current_room_id == int(room_data["id"]):
+		var room_node := get_room_node(int(room_data["id"]))
+		if room_node != null:
+			room_node.set_room_label(str(room_data["encounter_status"]))
+	if run_active:
+		save_progress()
+
+
+func _process_final_wave_break(delta: float) -> void:
+	if not run_active or current_room_id < 0:
+		return
+	var room_data := get_current_room_data()
+	if room_data.is_empty() or room_data.get("encounter_format", "") != "fixed_final_waves":
+		return
+	var remaining := float(room_data.get("wave_break_remaining", 0.0))
+	if remaining <= 0.0 or room_data.get("wave_spawn_pending", false):
+		return
+	remaining = maxf(remaining - delta, 0.0)
+	room_data["wave_break_remaining"] = remaining
+	if remaining > 0.0:
+		room_data["encounter_status"] = "Wave %d/%d incoming in %.1fs" % [int(room_data.get("current_wave", 0)) + 1, int(room_data.get("wave_total", 0)), remaining]
+		set_room_data_by_id(room_data)
+		var room_node := get_room_node(current_room_id)
+		if room_node != null:
+			room_node.set_room_label(str(room_data["encounter_status"]))
+		return
+	room_data["current_wave"] = int(room_data.get("current_wave", 0)) + 1
+	room_data["wave_warning_visible"] = false
+	room_data["wave_spawn_pending"] = true
+	room_data["encounter_status"] = "Spawning wave %d/%d" % [int(room_data["current_wave"]), int(room_data.get("wave_total", 0))]
+	set_room_data_by_id(room_data)
+	if run_active:
+		save_progress()
+	call_deferred("spawn_room_enemies", current_room_id)
 
 
 func _on_sorcerer_summon_group_cleared(room_id: int, sorcerer_id: String, wave_number: int) -> void:
@@ -2600,6 +3082,10 @@ func _on_sorcerer_summon_group_cleared(room_id: int, sorcerer_id: String, wave_n
 	var policy := encounter_catalogue.get_boss_support_policy(current_stage)
 	var total_waves := int(policy.get("sorcerer_wave_count", 0))
 	if wave_number >= total_waves:
+		# Release the Sorcerer's damage lock only after the final wave has been
+		# cleared. The Sorcerer remains alive so the normal boss-clear path runs.
+		if sorcerer.has_method("notify_summon_wave_cleared"):
+			sorcerer.notify_summon_wave_cleared(wave_number)
 		return
 	var support_enemy_id := str(policy.get("enemy_id", ""))
 	var support_count := int(policy.get("after_wave_count", 0))
@@ -2623,6 +3109,21 @@ func on_combat_room_cleared(room_id: int) -> void:
 	var cleared_data: Dictionary = get_room_data_by_id(room_id)
 	if cleared_data.is_empty():
 		return
+	if cleared_data.get("is_modified_combat", false) and not cleared_data.get("debuff_reward_claimed", false):
+		cleared_data["debuff_reward_claimed"] = true
+		current_run["debuff_bonus_essence"] = int(current_run.get("debuff_bonus_essence", 0)) + int(cleared_data.get("debuff_bonus_essence", 0))
+		var state: Dictionary = current_run.get("debuff_state", get_default_debuff_state()).duplicate(true)
+		state["room_modifier_id"] = ""
+		state["room_id"] = -1
+		state["active_names"] = []
+		state["speed_penalty"] = 0.0
+		state["walk_speed_multiplier_penalty"] = 0.0
+		state["attack_penalty_multiplier"] = 0.0
+		current_run["debuff_state"] = state
+		apply_run_modifiers(player.developer_combat_bypass)
+		# Persist the banked room bonus and cleared modifier before the reward modal.
+		if run_active:
+			save_progress()
 	cleared_data["combat_cleared"] = true
 	cleared_data["enemies_remaining"] = 0
 	set_room_data_by_id(cleared_data)
@@ -2786,6 +3287,8 @@ func _on_room_event_primary_button_pressed() -> void:
 			_on_shop_potion_pressed("small_healing")
 		RoomEventType.DEBUFF_NOTICE:
 			_on_debuff_room_continue_pressed()
+		RoomEventType.DEBUFF_CHOICE:
+			_select_debuff_choice(0)
 
 
 func _on_room_event_secondary_button_pressed() -> void:
@@ -2793,6 +3296,8 @@ func _on_room_event_secondary_button_pressed() -> void:
 		return
 	if current_room_event_type == RoomEventType.REWARD_CHOICE:
 		_on_shop_potion_pressed("big_healing")
+	elif current_room_event_type == RoomEventType.DEBUFF_CHOICE:
+		_select_debuff_choice(1)
 
 
 func _on_room_event_tertiary_button_pressed() -> void:
@@ -2800,6 +3305,8 @@ func _on_room_event_tertiary_button_pressed() -> void:
 		return
 	if current_room_event_type == RoomEventType.REWARD_CHOICE:
 		_on_shop_potion_pressed("stamina")
+	elif current_room_event_type == RoomEventType.DEBUFF_CHOICE:
+		_select_debuff_choice(2)
 
 
 func _on_room_event_quaternary_button_pressed() -> void:
@@ -3039,6 +3546,7 @@ func _on_stage_exit_requested(room: StageRoom) -> void:
 	if not room_data.get("boss_reward_collected", false):
 		return
 
+	_record_level_completion_at_portal()
 	start_stage_transition()
 
 
@@ -3052,10 +3560,14 @@ func _on_player_death_started() -> void:
 
 
 func _on_player_died() -> void:
+	if not run_active and end_run_payout_committed:
+		return
 	if skill_tree != null:
 		skill_tree.commit_pending_eligibility()
+	# Freeze the accounting before cleanup. Payout persistence is the transaction
+	# boundary; a failed write leaves the in-memory run available for retry.
 	run_active = false
-	clear_saved_run_snapshot()
+	_apply_end_run_payout()
 	call_deferred("show_death_screen")
 
 
@@ -3064,7 +3576,27 @@ func show_death_screen() -> void:
 	run_background.hide()
 	set_run_ui_visible(false)
 	death_screen.visible = true
+	_update_death_summary()
 	get_tree().paused = true
+
+
+func _update_death_summary() -> void:
+	var result: Dictionary = pending_end_run_result
+	if result.is_empty():
+		death_summary_label.text = "Payout could not be saved yet."
+		death_payout_status_label.text = "Save failed. Retry the payout or return later."
+		death_retry_payout_button.visible = true
+		return
+	death_summary_label.text = "Stages completed: %d  (+%d Essence)\nLevels completed: %d  (+%d Essence)\nRegular enemies: %d  (+%d Essence)\nDesignated bosses: %d  (+%d Essence)\nLeftover gold: %d  (+%d Essence)\nModified-room bonuses: +%d Essence\nTotal essence earned: %d" % [
+		int(result.get("completed_stage_count", 0)), int(result.get("stage_essence", 0)),
+		int(result.get("completed_level_count", 0)), int(result.get("level_essence", 0)),
+		int(result.get("regular_kills", 0)), int(result.get("regular_essence", 0)),
+		int(result.get("boss_kills", 0)), int(result.get("boss_essence", 0)),
+		int(result.get("leftover_gold", 0)), int(result.get("gold_essence", 0)),
+		int(result.get("debuff_essence", 0)), int(result.get("total_essence", 0)),
+	]
+	death_payout_status_label.text = "Permanent Essence: %d" % int(result.get("permanent_balance", meta_progression.get("essence", 0)))
+	death_retry_payout_button.visible = false
 
 
 func trigger_hit_stop() -> void:

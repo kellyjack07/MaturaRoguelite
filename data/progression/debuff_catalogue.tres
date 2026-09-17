@@ -1,0 +1,123 @@
+[gd_resource type="Resource" script_class="DebuffCatalogue" format=3 uid="uid://rdmvv0iuhkhg"]
+
+[ext_resource type="Script" uid="uid://bdhlngyrd7q0c" path="res://scripts/debuff_catalogue.gd" id="1"]
+[ext_resource type="Script" uid="uid://drsh1txuyytt6" path="res://scripts/debuff_definition.gd" id="2"]
+
+[sub_resource type="Resource" id="enemy_health"]
+script = ExtResource("2")
+id = "enemy_health"
+title = "Hardened Enemies"
+description = "+30% enemy maximum health"
+effect_value = 0.3
+
+[sub_resource type="Resource" id="more_enemies"]
+script = ExtResource("2")
+id = "more_enemies"
+title = "Reinforced Roster"
+description = "+40% initial enemy count"
+tier = 2
+max_stage = 2
+effect_value = 0.4
+
+[sub_resource type="Resource" id="slowness"]
+script = ExtResource("2")
+id = "slowness"
+title = "Slowness"
+description = "-15% player walking speed"
+tier = 2
+min_stage = 2
+effect_value = 0.15
+
+[sub_resource type="Resource" id="damage_reduction"]
+script = ExtResource("2")
+id = "damage_reduction"
+title = "Dull Strikes"
+description = "-20% player outgoing attack damage"
+effect_value = 0.2
+
+[sub_resource type="Resource" id="enemy_haste"]
+script = ExtResource("2")
+id = "enemy_haste"
+title = "Enemy Haste"
+description = "+15% enemy walking speed"
+effect_value = 0.15
+
+[sub_resource type="Resource" id="projectile_speed"]
+script = ExtResource("2")
+id = "projectile_speed"
+title = "Swift Projectiles"
+description = "+25% enemy projectile speed"
+tier = 2
+min_stage = 3
+requires_projectile = true
+effect_value = 0.25
+
+[sub_resource type="Resource" id="melee_reach"]
+script = ExtResource("2")
+id = "melee_reach"
+title = "Long Reach"
+description = "+20% supported melee reach"
+tier = 2
+min_stage = 2
+requires_melee = true
+effect_value = 0.2
+
+[sub_resource type="Resource" id="enemy_regeneration"]
+script = ExtResource("2")
+id = "enemy_regeneration"
+title = "Enemy Regeneration"
+description = "Enemies regenerate 2% maximum health after 3 seconds"
+tier = 2
+effect_value = 0.02
+
+[sub_resource type="Resource" id="restricted_vision"]
+script = ExtResource("2")
+id = "restricted_vision"
+title = "Restricted Vision"
+description = "Visibility is limited to a 135-pixel radius"
+tier = 2
+
+[sub_resource type="Resource" id="slow_recovery"]
+script = ExtResource("2")
+id = "slow_recovery"
+title = "Slow Recovery"
+description = "-25% stamina regeneration"
+tier = 2
+effect_value = 0.25
+
+[sub_resource type="Resource" id="elite_defender"]
+script = ExtResource("2")
+id = "elite_defender"
+title = "Elite Defender"
+description = "One enemy gains +50% health and +20% damage"
+tier = 2
+effect_value = 0.5
+
+[sub_resource type="Resource" id="reinforcements"]
+script = ExtResource("2")
+id = "reinforcements"
+title = "Reinforcements"
+description = "A second wave arrives after the first group"
+tier = 3
+
+[sub_resource type="Resource" id="damage_tick"]
+script = ExtResource("2")
+id = "damage_tick"
+title = "Damage Tick"
+description = "Deferred"
+tier = 3
+selection_weight = 0.0
+enabled = false
+
+[sub_resource type="Resource" id="weapon_restriction"]
+script = ExtResource("2")
+id = "weapon_restriction"
+title = "Weapon Restriction"
+description = "Deferred"
+tier = 3
+selection_weight = 0.0
+enabled = false
+
+[resource]
+script = ExtResource("1")
+definitions = Array[ExtResource("2")]([SubResource("enemy_health"), SubResource("more_enemies"), SubResource("slowness"), SubResource("damage_reduction"), SubResource("enemy_haste"), SubResource("projectile_speed"), SubResource("melee_reach"), SubResource("enemy_regeneration"), SubResource("restricted_vision"), SubResource("slow_recovery"), SubResource("elite_defender"), SubResource("reinforcements"), SubResource("damage_tick"), SubResource("weapon_restriction")])

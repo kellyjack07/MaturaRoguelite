@@ -1,4 +1,12 @@
 [gd_scene format=3]
 [ext_resource type="PackedScene" path="res://enemies/orc_barbare.tscn" id="1"]
+[ext_resource type="SpriteFrames" path="res://data/enemy_frames_orc_barbare_red.tres" id="2"]
 [node name="OrcBarbareRed" instance=ExtResource("1")]
 skin_variant = 3
+difficulty_weight = 1.8
+enemy_max_health = 30
+enemy_damage = 7
+move_speed = 44.0
+attack_recover_duration = 0.64
+[node name="AnimatedSprite2D" parent="." index="0"]
+sprite_frames = ExtResource("2")

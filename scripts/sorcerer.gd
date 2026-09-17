@@ -14,10 +14,15 @@ var summon_timer: float = 0.0
 var wave_number: int = 0
 var next_wave_ready: bool = false
 var summon_animation_active: bool = false
+var summon_damage_lock_active: bool = true
 
 
 func on_enemy_ready() -> void:
 	hitbox.set_active(false)
+	# The Sorcerer cannot be killed before its final summon wave has been
+	# completed. Main releases this lock through the existing wave-complete path.
+	summon_damage_lock_active = sorcerer_wave_count > 0
+	hurtbox.set_enabled(not summon_damage_lock_active)
 	summon_timer = summon_initial_delay
 	animated_sprite.animation_finished.connect(_on_animation_finished)
 	play_idle_animation()
@@ -44,13 +49,19 @@ func update_behavior(delta: float) -> void:
 
 
 func notify_summon_wave_cleared(cleared_wave_number: int) -> void:
-	if cleared_wave_number != wave_number or wave_number >= sorcerer_wave_count:
+	if cleared_wave_number != wave_number:
+		return
+	if cleared_wave_number >= sorcerer_wave_count:
+		summon_damage_lock_active = false
+		hurtbox.set_enabled(true)
 		return
 	next_wave_ready = true
 
 
 func restore_summon_progress(completed_wave_number: int) -> void:
 	wave_number = clampi(completed_wave_number, 0, sorcerer_wave_count)
+	summon_damage_lock_active = wave_number < sorcerer_wave_count
+	hurtbox.set_enabled(not summon_damage_lock_active)
 	next_wave_ready = wave_number > 0 and wave_number < sorcerer_wave_count
 
 

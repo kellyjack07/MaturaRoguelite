@@ -25,6 +25,19 @@ func get_final_roster(stage: int) -> Array[Dictionary]:
 	return _copy_entries(get_stage_settings(stage).get("final_roster", []))
 
 
+func get_final_waves(stage: int, replay_first_stage: bool = false) -> Array[Array]:
+	var settings := get_stage_settings(stage)
+	var key := "replay_final_waves" if replay_first_stage else "final_waves"
+	var value: Variant = settings.get(key, [])
+	var waves: Array[Array] = []
+	if not value is Array:
+		return waves
+	for wave: Variant in value:
+		if wave is Array:
+			waves.append(_copy_entries(wave))
+	return waves
+
+
 func get_boss_roster(stage: int) -> Array[Dictionary]:
 	return _copy_entries(get_stage_settings(stage).get("boss_roster", []))
 

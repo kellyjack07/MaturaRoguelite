@@ -20,7 +20,7 @@ enum EnemyState {
 @export var dash_speed: float = 75.0
 @export var pass_duration: float = 0.5
 @export var attack_duration: float = 0.32
-@export var attack_hit_delay: float = 0.12
+@export_range(0.0, 1.0, 0.01) var attack_hit_point: float = 0.5
 @export var attack_recover_duration: float = 0.8
 @export var attack_damage_radius: float = 20.0
 @export var pass_distance: float = 38.0
@@ -36,6 +36,9 @@ var next_pass_from_left: bool = true
 
 func on_enemy_ready() -> void:
 	receives_knockback = false
+	prepare_duration = get_authored_animation_duration(&"prepare", prepare_duration)
+	attack_duration = get_authored_animation_duration(&"attack", attack_duration)
+	pass_duration = attack_duration * 0.5
 	hitbox.set_active(false)
 	play_idle_animation()
 
@@ -91,7 +94,8 @@ func update_pass_state(delta: float, second_pass: bool) -> void:
 
 	# Check the player's live position at the hit frame. The position captured
 	# during preparation is only the pass target and must not authorize a stale hit.
-	if not attack_damage_applied and player != null and global_position.distance_to(player.global_position) <= attack_damage_radius:
+	var pass_elapsed := pass_duration - state_timer
+	if not attack_damage_applied and pass_elapsed >= pass_duration * attack_hit_point and player != null and global_position.distance_to(player.global_position) <= attack_damage_radius:
 		attack_damage_applied = true
 		damage_player_in_attack_radius()
 

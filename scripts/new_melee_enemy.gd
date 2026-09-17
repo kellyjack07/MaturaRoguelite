@@ -3,20 +3,17 @@ class_name NewMeleeEnemy
 
 enum State { IDLE, CHASE, PREPARE, DASH, ATTACK, RECOVER }
 
-@export var sprite_folder: String = "Goblin_Regular_01 (Green Skinned)"
-@export var sprite_prefix: String = "Goblin_Regular_01"
-@export var sprite_frame_size := Vector2(38, 26)
-@export var move_frame_count := 10
-@export var prepare_frame_count := 5
-@export var attack_frame_count := 10
 @export var uses_dash: bool = true
+@export var difficulty_weight: float = 1.0
+@export var enemy_max_health: int = 20
+@export var enemy_damage: int = 5
 @export var aggro_radius: float = 80.0
 @export var attack_range: float = 25.0
 @export var prepare_duration: float = 0.18
 @export var dash_speed: float = 75.0
 @export var dash_duration: float = 0.5
 @export var attack_duration: float = 0.32
-@export var attack_hit_delay: float = 0.12
+@export_range(0.0, 1.0, 0.01) var attack_hit_point: float = 0.375
 @export var attack_recover_duration: float = 0.8
 @export var attack_damage_radius: float = 20.0
 
@@ -28,10 +25,12 @@ var is_awake := false
 
 func on_enemy_ready() -> void:
 	receives_knockback = false
-	hitbox.damage = 5
-	health_component.max_health = 20
+	hitbox.damage = enemy_damage
+	health_component.max_health = enemy_max_health
+	health_component.current_health = enemy_max_health
+	prepare_duration = get_authored_animation_duration(&"prepare", prepare_duration)
+	attack_duration = get_authored_animation_duration(&"attack", attack_duration)
 	hitbox.set_active(false)
-	_build_sprite_frames()
 	play_idle_animation()
 
 func update_behavior(delta: float) -> void:
@@ -70,7 +69,7 @@ func update_behavior(delta: float) -> void:
 			stop_moving()
 			play_attack_animation()
 			state_timer -= delta
-			if not attack_damage_applied and state_timer <= attack_duration - attack_hit_delay:
+			if not attack_damage_applied and state_timer <= attack_duration * (1.0 - attack_hit_point):
 				attack_damage_applied = true
 				_damage_player_if_in_range()
 			if state_timer <= 0.0:
@@ -114,40 +113,6 @@ func _damage_player_if_in_range() -> void:
 	var player_hurtbox := player.get_node_or_null("Hurtbox") as HurtboxComponent
 	if player_hurtbox != null:
 		player_hurtbox.take_hit(hitbox.damage, global_position)
-
-func _sheet(path: String, frame_count: int, frame_size: Vector2) -> Array[Texture2D]:
-	var texture := load(path) as Texture2D
-	var result: Array[Texture2D] = []
-	if texture == null:
-		return result
-	for index in frame_count:
-		var atlas := AtlasTexture.new()
-		atlas.atlas = texture
-		atlas.region = Rect2(Vector2(frame_size.x * index, 0), frame_size)
-		result.append(atlas)
-	return result
-
-func _build_sprite_frames() -> void:
-	var root := "res://assets/Enemies/CHARACTER MEGAPACK/%s/" % sprite_folder
-	var frames := SpriteFrames.new()
-	frames.remove_animation(&"default")
-	_add_animation(frames, &"idle", _sheet(root + sprite_prefix + "_Idle_1x1.png", 1, sprite_frame_size), true, 3.0)
-	_add_animation(frames, &"move", _sheet(root + sprite_prefix + "_Move_%dx1.png" % move_frame_count, move_frame_count, sprite_frame_size), true, 12.0)
-	_add_animation(frames, &"prepare", _sheet(root + sprite_prefix + "_Prepare_%dx1.png" % prepare_frame_count, prepare_frame_count, sprite_frame_size), false, 12.0)
-	_add_animation(frames, &"attack", _sheet(root + sprite_prefix + "_ATK_Full_%dx1.png" % attack_frame_count, attack_frame_count, sprite_frame_size), false, 12.0)
-	if uses_dash:
-		_add_animation(frames, &"dash", _sheet(root + sprite_prefix + "_Dash_1x1.png", 1, sprite_frame_size), false, 8.0)
-	animated_sprite.sprite_frames = frames
-	animated_sprite.animation = &"idle"
-
-func _add_animation(frames: SpriteFrames, name: StringName, textures: Array[Texture2D], loop: bool, speed: float) -> void:
-	if textures.is_empty():
-		return
-	frames.add_animation(name)
-	frames.set_animation_loop(name, loop)
-	frames.set_animation_speed(name, speed)
-	for texture in textures:
-		frames.add_frame(name, texture)
 
 func play_idle_animation() -> void: play_animation_if_exists(&"idle")
 func play_move_animation() -> void: play_animation_if_exists(&"move")

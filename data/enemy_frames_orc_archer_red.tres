@@ -1,0 +1,156 @@
+[gd_resource type="SpriteFrames" load_steps=32 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/Enemies/CHARACTER MEGAPACK/Orc_Archer_03 (Red Skinned)/Orc_Archer_03_ATK_7x1.png" id="attack"]
+[ext_resource type="Texture2D" path="res://assets/Enemies/CHARACTER MEGAPACK/Orc_Archer_03 (Red Skinned)/Orc_Archer_03_Dash_1x1.png" id="dash"]
+[ext_resource type="Texture2D" path="res://assets/Enemies/CHARACTER MEGAPACK/Orc_Archer_03 (Red Skinned)/Orc_Archer_03_Idle_1x1.png" id="idle"]
+[ext_resource type="Texture2D" path="res://assets/Enemies/CHARACTER MEGAPACK/Orc_Archer_03 (Red Skinned)/Orc_Archer_03_Move_6x1.png" id="move"]
+[ext_resource type="Texture2D" path="res://assets/Enemies/CHARACTER MEGAPACK/Orc_Archer_03 (Red Skinned)/Orc_Archer_03_Prepare_11x1.png" id="prepare"]
+
+[sub_resource type="AtlasTexture" id="attack_0"]
+atlas = ExtResource("attack")
+region = Rect2(0, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="attack_1"]
+atlas = ExtResource("attack")
+region = Rect2(74, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="attack_2"]
+atlas = ExtResource("attack")
+region = Rect2(148, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="attack_3"]
+atlas = ExtResource("attack")
+region = Rect2(222, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="attack_4"]
+atlas = ExtResource("attack")
+region = Rect2(296, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="attack_5"]
+atlas = ExtResource("attack")
+region = Rect2(370, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="attack_6"]
+atlas = ExtResource("attack")
+region = Rect2(444, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="dash_0"]
+atlas = ExtResource("dash")
+region = Rect2(0, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="idle_0"]
+atlas = ExtResource("idle")
+region = Rect2(0, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="move_0"]
+atlas = ExtResource("move")
+region = Rect2(0, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="move_1"]
+atlas = ExtResource("move")
+region = Rect2(74, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="move_2"]
+atlas = ExtResource("move")
+region = Rect2(148, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="move_3"]
+atlas = ExtResource("move")
+region = Rect2(222, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="move_4"]
+atlas = ExtResource("move")
+region = Rect2(296, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="move_5"]
+atlas = ExtResource("move")
+region = Rect2(370, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="prepare_0"]
+atlas = ExtResource("prepare")
+region = Rect2(0, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="prepare_1"]
+atlas = ExtResource("prepare")
+region = Rect2(74, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="prepare_2"]
+atlas = ExtResource("prepare")
+region = Rect2(148, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="prepare_3"]
+atlas = ExtResource("prepare")
+region = Rect2(222, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="prepare_4"]
+atlas = ExtResource("prepare")
+region = Rect2(296, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="prepare_5"]
+atlas = ExtResource("prepare")
+region = Rect2(370, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="prepare_6"]
+atlas = ExtResource("prepare")
+region = Rect2(444, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="prepare_7"]
+atlas = ExtResource("prepare")
+region = Rect2(518, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="prepare_8"]
+atlas = ExtResource("prepare")
+region = Rect2(592, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="prepare_9"]
+atlas = ExtResource("prepare")
+region = Rect2(666, 0, 74, 41)
+
+[sub_resource type="AtlasTexture" id="prepare_10"]
+atlas = ExtResource("prepare")
+region = Rect2(740, 0, 74, 41)
+
+[resource]
+animations = [{
+"frames": [{"duration": 1.0, "texture": SubResource("attack_0")}, {"duration": 1.0, "texture": SubResource("attack_1")}, {"duration": 1.0, "texture": SubResource("attack_2")}, {"duration": 1.0, "texture": SubResource("attack_3")}, {"duration": 1.0, "texture": SubResource("attack_4")}, {"duration": 1.0, "texture": SubResource("attack_5")}, {"duration": 1.0, "texture": SubResource("attack_6")}],
+"loop": false,
+"name": &"attack",
+"speed": 7
+}
+
+,
+{
+"frames": [{"duration": 1.0, "texture": SubResource("dash_0")}],
+"loop": false,
+"name": &"dash",
+"speed": 5
+}
+,
+{
+"frames": [],
+"loop": true,
+"name": &"default",
+"speed": 5
+}
+,
+{
+"frames": [{"duration": 1.0, "texture": SubResource("idle_0")}],
+"loop": false,
+"name": &"idle",
+"speed": 5
+}
+,
+{
+"frames": [{"duration": 1.0, "texture": SubResource("move_0")}, {"duration": 1.0, "texture": SubResource("move_1")}, {"duration": 1.0, "texture": SubResource("move_2")}, {"duration": 1.0, "texture": SubResource("move_3")}, {"duration": 1.0, "texture": SubResource("move_4")}, {"duration": 1.0, "texture": SubResource("move_5")}],
+"loop": false,
+"name": &"move",
+"speed": 8
+}
+,
+{
+"frames": [{"duration": 1.0, "texture": SubResource("prepare_0")}, {"duration": 1.0, "texture": SubResource("prepare_1")}, {"duration": 1.0, "texture": SubResource("prepare_2")}, {"duration": 1.0, "texture": SubResource("prepare_3")}, {"duration": 1.0, "texture": SubResource("prepare_4")}, {"duration": 1.0, "texture": SubResource("prepare_5")}, {"duration": 1.0, "texture": SubResource("prepare_6")}, {"duration": 1.0, "texture": SubResource("prepare_7")}, {"duration": 1.0, "texture": SubResource("prepare_8")}, {"duration": 1.0, "texture": SubResource("prepare_9")}, {"duration": 1.0, "texture": SubResource("prepare_10")}],
+"loop": false,
+"name": &"prepare",
+"speed": 8
+}]
+

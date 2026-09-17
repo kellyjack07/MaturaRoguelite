@@ -4,12 +4,15 @@ class_name OrcArcher
 const PROJECTILE_SCENE := preload("res://enemies/enemy_projectile.tscn")
 enum State { IDLE, CHASE, PREPARE, ATTACK, RECOVER }
 @export var skin_variant: int = 1
+@export var difficulty_weight: float = 1.0
+@export var enemy_max_health: int = 20
+@export var enemy_damage: int = 5
 @export var aggro_radius := 160.0
 @export var firing_range := 100.0
-@export var prepare_duration := 0.18
-@export var attack_duration := 0.32
-@export var attack_release_delay := 0.12
-@export var recovery_duration := 0.8
+@export var prepare_duration := 0.3
+@export var attack_duration := 0.4
+@export_range(0.0, 1.0, 0.01) var attack_release_point := 0.5
+@export var recovery_duration := 1
 @export var projectile_speed := 180.0
 @export var projectile_lifetime := 2.0
 var state := State.IDLE
@@ -19,10 +22,12 @@ var released := false
 
 func on_enemy_ready() -> void:
 	receives_knockback = false
-	health_component.max_health = 20
-	hitbox.damage = 5
+	health_component.max_health = enemy_max_health
+	health_component.current_health = enemy_max_health
+	hitbox.damage = enemy_damage
+	prepare_duration = get_authored_animation_duration(&"prepare", prepare_duration)
+	attack_duration = get_authored_animation_duration(&"attack", attack_duration)
 	hitbox.set_active(false)
-	_build_frames()
 	play_animation_if_exists(&"idle")
 
 func update_behavior(delta: float) -> void:
@@ -38,7 +43,7 @@ func update_behavior(delta: float) -> void:
 			if timer <= 0.0: _enter_attack()
 		State.ATTACK:
 			stop_moving(); play_animation_if_exists(&"attack"); timer -= delta
-			if not released and timer <= attack_duration - attack_release_delay:
+			if not released and timer <= attack_duration * (1.0 - attack_release_point):
 				released = true
 				_fire_arrow()
 			if timer <= 0.0: state = State.RECOVER; timer = recovery_duration
@@ -69,26 +74,3 @@ func _fire_arrow() -> void:
 	arrow.speed = projectile_speed
 	arrow.lifetime = projectile_lifetime
 	arrow.setup(release_direction, hitbox.damage)
-
-func _build_frames() -> void:
-	var folder := "Orc_Archer_%02d (Green Skinned)" % skin_variant
-	if skin_variant == 2: folder = "Orc_Archer_02 (Blue Skinned)"
-	if skin_variant == 3: folder = "Orc_Archer_03 (Red Skinned)"
-	var prefix := "Orc_Archer_%02d" % skin_variant
-	var root := "res://assets/Enemies/CHARACTER MEGAPACK/%s/" % folder
-	var frames := SpriteFrames.new()
-	for name in [&"idle", &"move", &"prepare", &"attack"]: frames.add_animation(name)
-	_add(frames, &"idle", root + prefix + "_Idle_1x1.png", 1, 74, 41, true, 3.0)
-	_add(frames, &"move", root + prefix + "_Move_6x1.png", 6, 74, 41, true, 10.0)
-	_add(frames, &"prepare", root + prefix + "_Prepare_11x1.png", 11, 74, 41, false, 12.0)
-	_add(frames, &"attack", root + prefix + "_ATK_Full_18x1.png", 18, 74, 41, false, 12.0)
-	animated_sprite.sprite_frames = frames
-	animated_sprite.animation = &"idle"
-
-func _add(frames: SpriteFrames, name: StringName, path: String, count: int, width: int, height: int, loop: bool, speed: float) -> void:
-	var texture := load(path) as Texture2D
-	if texture == null: return
-	frames.set_animation_loop(name, loop); frames.set_animation_speed(name, speed)
-	for i in count:
-		var atlas := AtlasTexture.new(); atlas.atlas = texture; atlas.region = Rect2(i * width, 0, width, height); frames.add_frame(name, atlas)
-
